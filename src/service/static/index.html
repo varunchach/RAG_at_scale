@@ -669,9 +669,10 @@ async function doSearch() {
     }
 
     const data = await res.json();
-    // Append to conversation history for next turn
+    // Append to conversation history; cap at 20 messages (10 turns) to avoid bloating Bedrock context
     conversationHistory.push({ role: 'user', content: query });
     if (data.answer) conversationHistory.push({ role: 'assistant', content: data.answer });
+    if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
     updateConvBar();
     renderResults(data);
   } catch (e) {
@@ -793,7 +794,6 @@ document.getElementById('search-btn').addEventListener('click', doSearch);
 
 // ── Upload ───────────────────────────────────────────────────────────────────
 const uploadBtn    = document.getElementById('upload-btn');
-const upIcon       = document.getElementById('up-icon');
 const upLabel      = document.getElementById('up-label');
 const uploadStatus = document.getElementById('upload-status');
 

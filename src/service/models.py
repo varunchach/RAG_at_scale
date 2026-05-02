@@ -1,5 +1,5 @@
 # Pydantic Models for API
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -15,7 +15,7 @@ class SearchRequest(BaseModel):
     rerank: bool = True
     alpha: float = 0.6
     generate: bool = True
-    history: List[Dict[str, Any]] = []   # [{role, content}, ...] for multi-turn
+    history: List[Dict[str, Any]] = Field(default_factory=list)
     filters: Optional[Dict[str, Any]] = None
 
 class SearchResult(BaseModel):

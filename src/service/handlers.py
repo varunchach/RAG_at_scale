@@ -1,10 +1,13 @@
 # API Endpoint Handlers
 import asyncio
+import json
 import logging
 import os
 import time
 from datetime import datetime
 from typing import Dict, List
+
+import boto3
 
 from fastapi import HTTPException
 
@@ -44,13 +47,16 @@ except ImportError:  # Notebook path when `src` is injected into sys.path
 logger = logging.getLogger(__name__)
 
 
+_BEDROCK_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+
 class RAGService:
     def __init__(self):
         self.search_engine: HybridSearch | None = None
         self.reranker = Reranker()
         self.embedder = SparkEmbedder()
-        # doc_store maps doc ID → content so search results carry real text
         self._doc_store: Dict[str, str] = {}
+        self._bedrock = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
 
     def initialize_search(self, documents: List[dict], embeddings: List[List[float]]):
         """Index documents for hybrid search and store content for retrieval."""
@@ -75,7 +81,7 @@ class RAGService:
                 request.query,
                 query_embedding,
                 top_k=request.top_k * 2,
-                alpha=getattr(request, "alpha", 0.6),
+                alpha=request.alpha,
             )
 
             # Enrich with stored content
@@ -115,12 +121,12 @@ class RAGService:
 
             answer = None
             answer_time = None
-            if getattr(request, "generate", True) and results:
+            if request.generate and results:
                 ans_start = time.time()
                 chunks_for_llm = [
                     {"doc_id": r.doc_id, "content": r.content} for r in results
                 ]
-                answer = await self._generate_answer(request.query, chunks_for_llm, getattr(request, "history", []))
+                answer = await self._generate_answer(request.query, chunks_for_llm, request.history)
                 answer_time = time.time() - ans_start
 
             return SearchResponse(
@@ -129,7 +135,7 @@ class RAGService:
                 total_results=len(results),
                 search_time=search_time,
                 rerank_time=rerank_time,
-                answer=answer or None,
+                answer=answer,
                 answer_time=answer_time,
             )
 
@@ -152,19 +158,17 @@ class RAGService:
             logger.error("Embedding generation failed: %s", str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
 
-    async def _generate_answer(self, query: str, chunks: list[dict], history: list[dict] = []) -> str:
-        """Call Claude via AWS Bedrock to synthesise an answer, supporting multi-turn history."""
+    async def _generate_answer(self, query: str, chunks: list[dict], history: list[dict] | None = None) -> str | None:
         try:
-            import boto3, json
-            region = os.environ.get("AWS_REGION", "us-east-1")
             context = "\n\n".join(
                 f"[Chunk {i+1} — {c['doc_id']}]\n{c['content']}"
                 for i, c in enumerate(chunks)
             )
-            # Build messages: prior turns + new question with fresh context
+            # Keep last 10 turns max to avoid bloating Bedrock context window
+            recent = (history or [])[-10:]
             messages = [
                 {"role": h["role"], "content": h["content"]}
-                for h in history
+                for h in recent
                 if h.get("role") in ("user", "assistant") and h.get("content")
             ]
             messages.append({
@@ -175,22 +179,18 @@ class RAGService:
                     f"Answer using ONLY the context above. If the answer is not there, say so."
                 ),
             })
-            client = boto3.client("bedrock-runtime", region_name=region)
             body = json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 512,
                 "system": "You are a research assistant. Answer concisely from the provided context only.",
                 "messages": messages,
             })
-            response = client.invoke_model(
-                modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
-                body=body,
-            )
+            response = self._bedrock.invoke_model(modelId=_BEDROCK_MODEL, body=body)
             result = json.loads(response["body"].read())
             return result["content"][0]["text"].strip()
         except Exception as e:
             logger.warning("LLM answer generation failed: %s", e)
-            return ""
+            return None
 
     async def ingest(self, filename: str, file_bytes: bytes) -> IngestResponse:
         if not filename.lower().endswith(".pdf"):
