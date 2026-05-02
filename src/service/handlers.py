@@ -153,12 +153,10 @@ class RAGService:
             raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
 
     async def _generate_answer(self, query: str, chunks: list[dict]) -> str:
-        """Call Claude API to synthesise an answer from retrieved chunks."""
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if not api_key:
-            return ""
+        """Call Claude via AWS Bedrock to synthesise an answer from retrieved chunks."""
         try:
-            import anthropic
+            import boto3, json
+            region = os.environ.get("AWS_REGION", "us-east-1")
             context = "\n\n".join(
                 f"[Chunk {i+1} — {c['doc_id']}]\n{c['content']}"
                 for i, c in enumerate(chunks)
@@ -170,13 +168,18 @@ class RAGService:
                 f"QUESTION: {query}\n\n"
                 f"ANSWER:"
             )
-            client = anthropic.Anthropic(api_key=api_key)
-            message = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=512,
-                messages=[{"role": "user", "content": prompt}],
+            client = boto3.client("bedrock-runtime", region_name=region)
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 512,
+                "messages": [{"role": "user", "content": prompt}],
+            })
+            response = client.invoke_model(
+                modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+                body=body,
             )
-            return message.content[0].text.strip()
+            result = json.loads(response["body"].read())
+            return result["content"][0]["text"].strip()
         except Exception as e:
             logger.warning("LLM answer generation failed: %s", e)
             return ""
