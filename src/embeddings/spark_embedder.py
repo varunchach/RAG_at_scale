@@ -1,7 +1,6 @@
 # PySpark UDF for Distributed Embeddings
-from pyspark.sql.functions import pandas_udf
-from pyspark.sql.types import ArrayType, FloatType
-import pandas as pd
+# pyspark imports are deferred to get_embedding_udf() so this module loads
+# cleanly in Docker/Fargate where pyspark is not installed.
 from sentence_transformers import SentenceTransformer
 import torch
 import logging
@@ -67,6 +66,12 @@ class SparkEmbedder:
         - On a real GPU cluster, set CUDA_VISIBLE_DEVICES per-executor via
           spark.executorEnv.CUDA_VISIBLE_DEVICES or ResourceRequest.
         """
+        # Lazy import — pyspark is only required when running on a Spark cluster,
+        # not in the Docker/Fargate service image.
+        import pandas as pd
+        from pyspark.sql.functions import pandas_udf
+        from pyspark.sql.types import ArrayType, FloatType
+
         model_name = self.model_name  # capture only the name
 
         @pandas_udf(ArrayType(FloatType()))
