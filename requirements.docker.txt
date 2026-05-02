@@ -31,6 +31,9 @@ opentelemetry-exporter-otlp
 opentelemetry-instrumentation-fastapi
 prometheus-client
 
+# LLM answer generation
+anthropic
+
 # Config & utils
 pydantic
 pydantic-settings

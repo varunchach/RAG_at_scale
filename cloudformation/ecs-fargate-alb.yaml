@@ -67,6 +67,11 @@ Parameters:
       - 1827
       - 3653
     Description: CloudWatch log retention for ECS application logs.
+  AnthropicApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Anthropic API key for LLM answer generation (optional — leave blank to skip).
 
 Resources:
   Cluster:
@@ -207,6 +212,8 @@ Resources:
               Value: !Ref AWS::Region
             - Name: AWS_REGION
               Value: !Ref AWS::Region
+            - Name: ANTHROPIC_API_KEY
+              Value: !Ref AnthropicApiKey
           LogConfiguration:
             LogDriver: awslogs
             Options:

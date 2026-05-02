@@ -13,7 +13,8 @@ class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
     rerank: bool = True
-    alpha: float = 0.6   # 0.0 = pure keyword (BM25), 1.0 = pure semantic (dense)
+    alpha: float = 0.6
+    generate: bool = True   # whether to call LLM for final answer
     filters: Optional[Dict[str, Any]] = None
 
 class SearchResult(BaseModel):
@@ -29,6 +30,8 @@ class SearchResponse(BaseModel):
     total_results: int
     search_time: float
     rerank_time: Optional[float] = None
+    answer: Optional[str] = None        # LLM-generated answer from retrieved chunks
+    answer_time: Optional[float] = None
 
 class HealthResponse(BaseModel):
     status: str

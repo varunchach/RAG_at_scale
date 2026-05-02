@@ -1,6 +1,7 @@
 # API Endpoint Handlers
 import asyncio
 import logging
+import os
 import time
 from datetime import datetime
 from typing import Dict, List
@@ -112,12 +113,24 @@ class RAGService:
             log_search_query(request.query, len(results), search_time)
             metrics.searches_performed.inc()
 
+            answer = None
+            answer_time = None
+            if getattr(request, "generate", True) and results:
+                ans_start = time.time()
+                chunks_for_llm = [
+                    {"doc_id": r.doc_id, "content": r.content} for r in results
+                ]
+                answer = await self._generate_answer(request.query, chunks_for_llm)
+                answer_time = time.time() - ans_start
+
             return SearchResponse(
                 query=request.query,
                 results=results,
                 total_results=len(results),
                 search_time=search_time,
                 rerank_time=rerank_time,
+                answer=answer or None,
+                answer_time=answer_time,
             )
 
         except Exception as e:
@@ -138,6 +151,35 @@ class RAGService:
         except Exception as e:
             logger.error("Embedding generation failed: %s", str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+
+    async def _generate_answer(self, query: str, chunks: list[dict]) -> str:
+        """Call Claude API to synthesise an answer from retrieved chunks."""
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return ""
+        try:
+            import anthropic
+            context = "\n\n".join(
+                f"[Chunk {i+1} — {c['doc_id']}]\n{c['content']}"
+                for i, c in enumerate(chunks)
+            )
+            prompt = (
+                f"You are a research assistant. Use ONLY the context below to answer the question. "
+                f"If the answer is not in the context, say so clearly.\n\n"
+                f"CONTEXT:\n{context}\n\n"
+                f"QUESTION: {query}\n\n"
+                f"ANSWER:"
+            )
+            client = anthropic.Anthropic(api_key=api_key)
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return message.content[0].text.strip()
+        except Exception as e:
+            logger.warning("LLM answer generation failed: %s", e)
+            return ""
 
     async def ingest(self, filename: str, file_bytes: bytes) -> IngestResponse:
         if not filename.lower().endswith(".pdf"):

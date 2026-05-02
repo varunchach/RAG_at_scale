@@ -331,6 +331,40 @@
     padding: 0;
   }
 
+  /* ── Answer box ── */
+  .answer-box {
+    background: linear-gradient(135deg, #1a1f2e, #161b22);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .answer-box::before {
+    content: '✦ Answer';
+    position: absolute;
+    top: -10px;
+    left: 14px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 10px;
+    letter-spacing: .5px;
+  }
+  .answer-text {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+  }
+  .answer-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
   /* ── Empty / error / loading states ── */
   .state-box {
     text-align: center;
@@ -638,8 +672,19 @@ function renderResults(data) {
 
   const searchMs = (data.search_time * 1000).toFixed(0);
   const rerankMs = data.rerank_time ? (data.rerank_time * 1000).toFixed(0) : null;
+  const answerMs = data.answer_time ? (data.answer_time * 1000).toFixed(0) : null;
 
-  let html = `<div class="meta-bar">
+  let html = '';
+
+  // LLM answer box
+  if (data.answer) {
+    html += `<div class="answer-box">
+      <div class="answer-text">${escHtml(data.answer)}</div>
+      ${answerMs ? `<div class="answer-meta">Generated in ${answerMs}ms · claude-haiku-4-5</div>` : ''}
+    </div>`;
+  }
+
+  html += `<div class="meta-bar">
     <strong>${data.total_results}</strong> result${data.total_results !== 1 ? 's' : ''}
     &nbsp;·&nbsp; <strong>${searchMs}ms</strong> search`;
   if (rerankMs) html += ` + <strong>${rerankMs}ms</strong> rerank <span class="chip reranked">reranked</span>`;
