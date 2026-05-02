@@ -1,0 +1,47 @@
+version: '3.8'
+
+# ── Run the full RAG at Scale demo with ONE command: ──────────────────────
+#   docker-compose -f docker-compose-demo.yml up
+# Then open: http://localhost:8888
+# ─────────────────────────────────────────────────────────────────────────
+
+services:
+  jupyter:
+    image: jupyter/pyspark-notebook:spark-3.5.0   # Python 3.11 + PySpark 3.5 baked in
+    container_name: rag-demo-jupyter
+    ports:
+      - "8888:8888"    # Jupyter Lab
+      - "4040:4040"    # Spark UI
+    volumes:
+      - .:/home/jovyan/work        # mounts entire project into container
+    working_dir: /home/jovyan/work
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=ragdemo      # open at http://localhost:8888?token=ragdemo
+      - HADOOP_HOME=/usr/local/spark
+    command: >
+      bash -c "pip install -q -r requirements_notebook.txt &&
+               start-notebook.sh
+               --ServerApp.token='ragdemo'
+               --ServerApp.password=''
+               --ServerApp.open_browser=False"
+    restart: unless-stopped
+
+  # ── Observability stack (optional — run separately if needed) ────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rag-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    profiles: ["observability"]   # only starts with: docker-compose --profile observability up
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rag-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=ragdemo
+    profiles: ["observability"]

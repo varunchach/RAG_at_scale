@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb.bak
+
+# Data & embeddings (generated artifacts)
+data/embeddings/
+data/processed/
+
+# Environment / secrets
+.env
+.env.*
+*.env
+
+# AWS credentials
+.aws/
+
+# Spark / Hadoop
+derby.log
+metastore_db/
+spark-warehouse/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.user

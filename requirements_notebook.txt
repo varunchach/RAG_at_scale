@@ -1,0 +1,17 @@
+# Extra packages needed on top of what jupyter/pyspark-notebook already provides
+# (PySpark, pandas, numpy, matplotlib are already in the base image)
+sentence-transformers
+rank-bm25
+faiss-cpu
+pyarrow
+fastapi
+uvicorn[standard]
+httpx          # needed by fastapi TestClient
+python-json-logger
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+prometheus-client
+pydantic-settings
+boto3
+requests
