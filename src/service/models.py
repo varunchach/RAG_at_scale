@@ -36,6 +36,11 @@ class HealthResponse(BaseModel):
     version: str
     services: Dict[str, str]
 
+class IngestResponse(BaseModel):
+    filename: str
+    chunks_indexed: int
+    message: str
+
 class EmbeddingRequest(BaseModel):
     texts: List[str]
     model: Optional[str] = "sentence-transformers/all-MiniLM-L6-v2"

@@ -4,20 +4,20 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 try:
     from .handlers import rag_service
-    from .models import SearchRequest, EmbeddingRequest
+    from .models import SearchRequest, EmbeddingRequest, IngestResponse
     from ..observability.logging_config import StructuredLogger
     from ..observability.metrics import metrics
     from ..observability.tracing import tracing_manager
 except ImportError:  # Notebook path when `src` is injected into sys.path
     from service.handlers import rag_service
-    from service.models import SearchRequest, EmbeddingRequest
+    from service.models import SearchRequest, EmbeddingRequest, IngestResponse
     from observability.logging_config import StructuredLogger
     from observability.metrics import metrics
     from observability.tracing import tracing_manager
@@ -102,6 +102,12 @@ async def health():
 @app.post("/search")
 async def search(request: SearchRequest):
     return await rag_service.search(request)
+
+
+@app.post("/ingest", response_model=IngestResponse)
+async def ingest_document(file: UploadFile = File(...)):
+    contents = await file.read()
+    return await rag_service.ingest(file.filename or "upload.pdf", contents)
 
 
 @app.post("/embeddings")

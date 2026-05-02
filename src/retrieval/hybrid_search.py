@@ -43,6 +43,26 @@ class HybridSearch:
         logger.info("Indexed %d documents (dense=%s, sparse=✓)",
                     len(documents), self._embeddings is not None)
 
+    def add_documents(self, documents: List[Dict], embeddings: List[List[float]]):
+        """Append new documents to an already-initialised index."""
+        if not documents:
+            return
+        self.corpus.extend(doc["content"] for doc in documents)
+        self.doc_ids.extend(doc["id"] for doc in documents)
+
+        if embeddings and len(embeddings[0]) > 0:
+            new_mat = np.array(embeddings, dtype=np.float32)
+            norms = np.linalg.norm(new_mat, axis=1, keepdims=True)
+            new_norm = new_mat / np.maximum(norms, 1e-10)
+            self._embeddings = (
+                np.vstack([self._embeddings, new_norm])
+                if self._embeddings is not None else new_norm
+            )
+
+        tokenised = [doc.split() for doc in self.corpus]
+        self.bm25 = BM25Okapi(tokenised)
+        logger.info("Added %d docs. Total index size: %d", len(documents), len(self.corpus))
+
     # ------------------------------------------------------------------ #
     # Search                                                               #
     # ------------------------------------------------------------------ #

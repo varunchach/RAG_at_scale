@@ -360,6 +360,75 @@
     animation: spin .6s linear infinite;
   }
 
+  /* ── Upload card ── */
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .upload-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .upload-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  #pdf-file {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 8px 12px;
+    cursor: pointer;
+    min-width: 0;
+  }
+  #pdf-file::file-selector-button {
+    background: var(--border);
+    border: none;
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 10px;
+    padding: 4px 10px;
+  }
+  #upload-btn {
+    background: #1f6feb;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    transition: background .15s, opacity .15s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #upload-btn:hover    { background: #1a5cc8; }
+  #upload-btn:disabled { opacity: .5; cursor: default; }
+  #upload-status {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .upload-ok  { color: var(--green); }
+  .upload-err { color: var(--red); }
+  .upload-ing { color: var(--yellow); }
+
   /* ── Footer ── */
   footer {
     border-top: 1px solid var(--border);
@@ -429,6 +498,19 @@
     <div class="examples" id="examples">
       <span style="font-size:11px;color:var(--muted);align-self:center">Try:</span>
     </div>
+  </div>
+
+  <!-- Upload card -->
+  <div class="upload-card">
+    <h3>Upload Document</h3>
+    <div class="upload-row">
+      <input type="file" id="pdf-file" accept=".pdf">
+      <button id="upload-btn">
+        <span id="up-icon">&#8679;</span>
+        <span id="up-label">Upload PDF</span>
+      </button>
+    </div>
+    <div id="upload-status"></div>
   </div>
 
   <div id="results-area">
@@ -622,11 +704,56 @@ function escHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-// ── Wire up form ─────────────────────────────────────────────────────────────
+// ── Wire up search ───────────────────────────────────────────────────────────
 document.getElementById('query').addEventListener('keydown', e => {
   if (e.key === 'Enter') doSearch();
 });
 document.getElementById('search-btn').addEventListener('click', doSearch);
+
+// ── Upload ───────────────────────────────────────────────────────────────────
+const uploadBtn    = document.getElementById('upload-btn');
+const upIcon       = document.getElementById('up-icon');
+const upLabel      = document.getElementById('up-label');
+const uploadStatus = document.getElementById('upload-status');
+
+function setUploadLoading(on) {
+  uploadBtn.disabled = on;
+  upIcon.textContent  = on ? '' : '⬆';
+  upLabel.textContent = on ? 'Uploading…' : 'Upload PDF';
+  if (on) upIcon.outerHTML = '<span id="up-icon" class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></span>';
+}
+
+uploadBtn.addEventListener('click', async () => {
+  const fileInput = document.getElementById('pdf-file');
+  const file = fileInput.files[0];
+  if (!file) { uploadStatus.textContent = 'Please select a PDF file first.'; uploadStatus.className = 'upload-err'; return; }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  setUploadLoading(true);
+  uploadStatus.textContent = 'Processing…';
+  uploadStatus.className = 'upload-ing';
+
+  try {
+    const res = await fetch('/ingest', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) {
+      uploadStatus.textContent = '✗ ' + (data.detail || 'Upload failed');
+      uploadStatus.className = 'upload-err';
+    } else {
+      uploadStatus.textContent = `✓ ${data.message}`;
+      uploadStatus.className = 'upload-ok';
+      fileInput.value = '';
+      checkHealth();
+    }
+  } catch (e) {
+    uploadStatus.textContent = '✗ Network error: ' + e.message;
+    uploadStatus.className = 'upload-err';
+  } finally {
+    setUploadLoading(false);
+  }
+});
 </script>
 </body>
 </html>

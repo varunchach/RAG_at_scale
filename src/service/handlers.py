@@ -1,4 +1,5 @@
 # API Endpoint Handlers
+import asyncio
 import logging
 import time
 from datetime import datetime
@@ -11,10 +12,12 @@ try:
         EmbeddingRequest,
         EmbeddingResponse,
         HealthResponse,
+        IngestResponse,
         SearchRequest,
         SearchResponse,
         SearchResult,
     )
+    from .ingest import pdf_to_chunks
     from ..embeddings.spark_embedder import SparkEmbedder
     from ..observability.logging_config import log_search_query
     from ..observability.metrics import metrics
@@ -25,10 +28,12 @@ except ImportError:  # Notebook path when `src` is injected into sys.path
         EmbeddingRequest,
         EmbeddingResponse,
         HealthResponse,
+        IngestResponse,
         SearchRequest,
         SearchResponse,
         SearchResult,
     )
+    from service.ingest import pdf_to_chunks
     from embeddings.spark_embedder import SparkEmbedder
     from observability.logging_config import log_search_query
     from observability.metrics import metrics
@@ -133,6 +138,34 @@ class RAGService:
         except Exception as e:
             logger.error("Embedding generation failed: %s", str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+
+    async def ingest(self, filename: str, file_bytes: bytes) -> IngestResponse:
+        if not filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=422, detail="Only PDF files are supported.")
+
+        chunks = await asyncio.to_thread(pdf_to_chunks, file_bytes, filename)
+        if not chunks:
+            raise HTTPException(status_code=422, detail="No text could be extracted from this PDF.")
+
+        embeddings = await asyncio.to_thread(
+            self.embedder.embed_batch,
+            [c["content"] for c in chunks],
+        )
+
+        if not self.search_engine:
+            self.initialize_search(chunks, embeddings)
+        else:
+            self.search_engine.add_documents(chunks, embeddings)
+            for c in chunks:
+                self._doc_store[c["id"]] = c["content"]
+            metrics.index_size.set(len(self._doc_store))
+
+        logger.info("Ingested %d chunks from '%s'", len(chunks), filename)
+        return IngestResponse(
+            filename=filename,
+            chunks_indexed=len(chunks),
+            message=f"Indexed {len(chunks)} chunks from '{filename}'",
+        )
 
     async def health_check(self) -> HealthResponse:
         return HealthResponse(

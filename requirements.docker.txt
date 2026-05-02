@@ -5,6 +5,9 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 
+# Document parsing
+pypdf
+
 # Embeddings & search
 sentence-transformers
 faiss-cpu
