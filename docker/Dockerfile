@@ -23,8 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Production stage
 FROM base as production
 
-# Copy source code
+# Copy source code and sample documents
 COPY src/ ./src/
+COPY data/raw/ ./data/raw/
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \

@@ -69,6 +69,7 @@ class RAGService:
                 request.query,
                 query_embedding,
                 top_k=request.top_k * 2,
+                alpha=getattr(request, "alpha", 0.6),
             )
 
             # Enrich with stored content

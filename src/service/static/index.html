@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG at Scale</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --border:    #30363d;
+    --accent:    #7c3aed;
+    --accent-lt: #a78bfa;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --green:     #3fb950;
+    --red:       #f85149;
+    --yellow:    #d29922;
+    --radius:    10px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent-lt);
+    flex: 1;
+  }
+  .logo span { color: var(--text); }
+  .badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid;
+    transition: all .3s;
+  }
+  .badge.healthy  { color: var(--green); border-color: var(--green); background: #3fb95015; }
+  .badge.unhealthy{ color: var(--red);   border-color: var(--red);   background: #f8514915; }
+  .badge.checking { color: var(--yellow);border-color: var(--yellow);background: #d2992215; }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background .15s, color .15s;
+  }
+  nav a:hover { background: var(--border); color: var(--text); }
+
+  /* ── Main layout ── */
+  main {
+    flex: 1;
+    max-width: 860px;
+    width: 100%;
+    margin: 36px auto;
+    padding: 0 20px;
+  }
+
+  /* ── Search card ── */
+  .search-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  #query {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  #query::placeholder { color: var(--muted); }
+  #query:focus { border-color: var(--accent); }
+
+  #search-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 22px;
+    transition: background .15s, opacity .15s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  #search-btn:hover   { background: #6d28d9; }
+  #search-btn:disabled{ opacity: .55; cursor: default; }
+
+  /* ── Controls row ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl label { font-size: 11px; font-weight: 600; text-transform: uppercase;
+                letter-spacing: .6px; color: var(--muted); }
+
+  /* Alpha slider */
+  .alpha-wrap { display: flex; align-items: center; gap: 8px; }
+  .alpha-wrap span { font-size: 12px; color: var(--muted); min-width: 50px; }
+  .alpha-wrap span:last-child { text-align: right; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 130px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent-lt);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  #alpha-label { font-size: 12px; color: var(--accent-lt); font-weight: 600; min-width: 80px; }
+
+  /* Top-k */
+  #top-k {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 6px 10px;
+    width: 60px;
+    text-align: center;
+    outline: none;
+  }
+  #top-k:focus { border-color: var(--accent); }
+
+  /* Toggle */
+  .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 22px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle-track::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 3px; top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .2s;
+  }
+  .toggle input:checked + .toggle-track::before { transform: translateX(18px); }
+
+  /* ── Example queries ── */
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .example-pill {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 12px;
+    transition: border-color .15s, color .15s;
+  }
+  .example-pill:hover { border-color: var(--accent-lt); color: var(--accent-lt); }
+
+  /* ── Meta bar ── */
+  .meta-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .meta-bar strong { color: var(--text); }
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 11px;
+    padding: 2px 10px;
+  }
+  .chip.reranked { border-color: var(--accent); color: var(--accent-lt); }
+
+  /* ── Result card ── */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    transition: border-color .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card:hover { border-color: var(--accent); }
+
+  .score-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: var(--radius) 0 0 var(--radius);
+    background: linear-gradient(to bottom, var(--accent), var(--accent-lt));
+    opacity: .8;
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .rank-num {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+    min-width: 20px;
+  }
+  .doc-badge {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    font-family: monospace;
+  }
+  .score-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-lt);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rerank-badge {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .result-progress {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .result-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--accent), var(--accent-lt));
+    transition: width .4s ease;
+  }
+
+  .result-content {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .result-content.truncated { /* JS toggled */ }
+
+  .read-more {
+    background: none;
+    border: none;
+    color: var(--accent-lt);
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 6px;
+    padding: 0;
+  }
+
+  /* ── Empty / error / loading states ── */
+  .state-box {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .state-box .icon { font-size: 40px; margin-bottom: 12px; }
+  .state-box p    { font-size: 14px; }
+
+  .error-banner {
+    background: #f8514915;
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    color: var(--red);
+    font-size: 13px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Spinner ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--accent-lt); }
+
+  @media (max-width: 600px) {
+    main { margin: 20px auto; }
+    .controls { gap: 14px; }
+    input[type=range] { width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡ <span>RAG at Scale</span></div>
+  <div id="health-badge" class="badge checking">checking...</div>
+  <nav>
+    <a href="/docs" target="_blank">API Docs</a>
+    <a href="/health" target="_blank">Health</a>
+  </nav>
+</header>
+
+<main>
+  <div class="search-card">
+    <div class="input-row">
+      <input id="query" type="text" placeholder="Ask something about the documents…" autocomplete="off">
+      <button id="search-btn">
+        <span id="btn-icon">&#9906;</span>
+        <span id="btn-label">Search</span>
+      </button>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl">
+        <label>Search mode</label>
+        <div class="alpha-wrap">
+          <span>Keyword</span>
+          <input type="range" id="alpha" min="0" max="1" step="0.1" value="0.6">
+          <span style="text-align:right">Semantic</span>
+        </div>
+        <span id="alpha-label">α = 0.6 · hybrid</span>
+      </div>
+
+      <div class="ctrl">
+        <label>Top K</label>
+        <input type="number" id="top-k" value="5" min="1" max="20">
+      </div>
+
+      <div class="ctrl">
+        <label>Rerank</label>
+        <label class="toggle">
+          <input type="checkbox" id="rerank" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="examples" id="examples">
+      <span style="font-size:11px;color:var(--muted);align-self:center">Try:</span>
+    </div>
+  </div>
+
+  <div id="results-area">
+    <div class="state-box">
+      <div class="icon">&#128269;</div>
+      <p>Enter a query above to search the indexed documents.</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <a href="/docs" target="_blank">Swagger UI</a>
+  <a href="/health" target="_blank">Health JSON</a>
+  <a href="https://github.com/varunchach/RAG_at_scale" target="_blank">GitHub</a>
+</footer>
+
+<script>
+const EXAMPLE_QUERIES = [
+  'What is GraphRAG and how does it improve RAG?',
+  'How do cross-encoders fix hallucination?',
+  'What caused the Void-Leakage in Chronos-Deep?',
+  'Explain temporal relevance in retrieval systems',
+  'Agentic AI trends in 2026',
+];
+
+// ── Populate example pills ──────────────────────────────────────────────────
+const examplesEl = document.getElementById('examples');
+EXAMPLE_QUERIES.forEach(q => {
+  const pill = document.createElement('button');
+  pill.className = 'example-pill';
+  pill.textContent = q;
+  pill.onclick = () => { document.getElementById('query').value = q; doSearch(); };
+  examplesEl.appendChild(pill);
+});
+
+// ── Alpha label ─────────────────────────────────────────────────────────────
+const alphaInput = document.getElementById('alpha');
+const alphaLabel = document.getElementById('alpha-label');
+function updateAlphaLabel() {
+  const v = parseFloat(alphaInput.value);
+  let mode = v === 0 ? 'pure keyword' : v === 1 ? 'pure semantic' : 'hybrid';
+  alphaLabel.textContent = `α = ${v.toFixed(1)} · ${mode}`;
+}
+alphaInput.addEventListener('input', updateAlphaLabel);
+updateAlphaLabel();
+
+// ── Health check ─────────────────────────────────────────────────────────────
+async function checkHealth() {
+  const badge = document.getElementById('health-badge');
+  try {
+    const res = await fetch('/health');
+    const data = await res.json();
+    if (data.status === 'healthy') {
+      const indexed = data.services?.doc_store || '';
+      badge.textContent = `healthy · ${indexed}`;
+      badge.className = 'badge healthy';
+    } else {
+      badge.textContent = 'degraded';
+      badge.className = 'badge unhealthy';
+    }
+  } catch {
+    badge.textContent = 'unreachable';
+    badge.className = 'badge unhealthy';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 30000);
+
+// ── Search ───────────────────────────────────────────────────────────────────
+const btn      = document.getElementById('search-btn');
+const btnIcon  = document.getElementById('btn-icon');
+const btnLabel = document.getElementById('btn-label');
+
+function setLoading(on) {
+  btn.disabled = on;
+  if (on) {
+    btnIcon.outerHTML = '<span id="btn-icon" class="spinner"></span>';
+    btnLabel.textContent = 'Searching…';
+  } else {
+    document.getElementById('btn-icon').outerHTML = '<span id="btn-icon">&#9906;</span>';
+    btnLabel.textContent = 'Search';
+  }
+}
+
+async function doSearch() {
+  const query  = document.getElementById('query').value.trim();
+  if (!query) return;
+
+  const alpha  = parseFloat(alphaInput.value);
+  const top_k  = parseInt(document.getElementById('top-k').value) || 5;
+  const rerank = document.getElementById('rerank').checked;
+  const area   = document.getElementById('results-area');
+
+  setLoading(true);
+  area.innerHTML = '';
+
+  try {
+    const res = await fetch('/search', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, top_k, rerank, alpha }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      area.innerHTML = `<div class="error-banner">&#9888; ${err.detail || 'Search failed'}</div>`;
+      return;
+    }
+
+    const data = await res.json();
+    renderResults(data);
+  } catch (e) {
+    area.innerHTML = `<div class="error-banner">&#9888; Network error: ${e.message}</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResults(data) {
+  const area = document.getElementById('results-area');
+  if (!data.results || data.results.length === 0) {
+    area.innerHTML = '<div class="state-box"><div class="icon">&#128203;</div><p>No results found. Try a different query or lower alpha.</p></div>';
+    return;
+  }
+
+  const searchMs = (data.search_time * 1000).toFixed(0);
+  const rerankMs = data.rerank_time ? (data.rerank_time * 1000).toFixed(0) : null;
+
+  let html = `<div class="meta-bar">
+    <strong>${data.total_results}</strong> result${data.total_results !== 1 ? 's' : ''}
+    &nbsp;·&nbsp; <strong>${searchMs}ms</strong> search`;
+  if (rerankMs) html += ` + <strong>${rerankMs}ms</strong> rerank <span class="chip reranked">reranked</span>`;
+  html += `</div>`;
+
+  const maxScore = Math.max(...data.results.map(r => r.rerank_score ?? r.score), 0.001);
+
+  data.results.forEach((r, i) => {
+    const displayScore = r.rerank_score ?? r.score;
+    const pct = Math.min(100, (displayScore / maxScore) * 100).toFixed(1);
+    const scoreText = r.rerank_score != null
+      ? r.rerank_score.toFixed(3)
+      : r.score.toFixed(3);
+    const rerankExtra = r.rerank_score != null
+      ? `<span class="rerank-badge">hybrid ${r.score.toFixed(3)}</span>`
+      : '';
+
+    const PREVIEW = 220;
+    const full    = r.content || '';
+    const short   = full.length > PREVIEW ? full.slice(0, PREVIEW) + '…' : full;
+    const hasMore = full.length > PREVIEW;
+    const contentId = `content-${i}`;
+
+    html += `
+    <div class="result-card">
+      <div class="score-bar"></div>
+      <div class="result-header">
+        <span class="rank-num">#${i + 1}</span>
+        <span class="doc-badge">${escHtml(r.doc_id)}</span>
+        <span class="score-badge">
+          ${rerankExtra}
+          <strong>${scoreText}</strong>
+        </span>
+      </div>
+      <div class="result-progress">
+        <div class="result-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="result-content" id="${contentId}">${escHtml(short)}</div>
+      ${hasMore ? `<button class="read-more" onclick="toggleContent('${contentId}', ${JSON.stringify(full)}, ${JSON.stringify(short)}, this)">Show more</button>` : ''}
+    </div>`;
+  });
+
+  area.innerHTML = html;
+}
+
+function toggleContent(id, full, short, btn) {
+  const el = document.getElementById(id);
+  if (btn.textContent === 'Show more') {
+    el.textContent = full;
+    btn.textContent = 'Show less';
+  } else {
+    el.textContent = short;
+    btn.textContent = 'Show more';
+  }
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Wire up form ─────────────────────────────────────────────────────────────
+document.getElementById('query').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+document.getElementById('search-btn').addEventListener('click', doSearch);
+</script>
+</body>
+</html>

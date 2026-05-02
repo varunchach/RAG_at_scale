@@ -11,8 +11,9 @@ class DocumentChunk(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
-    top_k: int = 10
+    top_k: int = 5
     rerank: bool = True
+    alpha: float = 0.6   # 0.0 = pure keyword (BM25), 1.0 = pure semantic (dense)
     filters: Optional[Dict[str, Any]] = None
 
 class SearchResult(BaseModel):
