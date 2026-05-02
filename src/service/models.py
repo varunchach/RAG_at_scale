@@ -14,7 +14,8 @@ class SearchRequest(BaseModel):
     top_k: int = 5
     rerank: bool = True
     alpha: float = 0.6
-    generate: bool = True   # whether to call LLM for final answer
+    generate: bool = True
+    history: List[Dict[str, Any]] = []   # [{role, content}, ...] for multi-turn
     filters: Optional[Dict[str, Any]] = None
 
 class SearchResult(BaseModel):

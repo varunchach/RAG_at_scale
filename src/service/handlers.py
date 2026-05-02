@@ -120,7 +120,7 @@ class RAGService:
                 chunks_for_llm = [
                     {"doc_id": r.doc_id, "content": r.content} for r in results
                 ]
-                answer = await self._generate_answer(request.query, chunks_for_llm)
+                answer = await self._generate_answer(request.query, chunks_for_llm, getattr(request, "history", []))
                 answer_time = time.time() - ans_start
 
             return SearchResponse(
@@ -152,8 +152,8 @@ class RAGService:
             logger.error("Embedding generation failed: %s", str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
 
-    async def _generate_answer(self, query: str, chunks: list[dict]) -> str:
-        """Call Claude via AWS Bedrock to synthesise an answer from retrieved chunks."""
+    async def _generate_answer(self, query: str, chunks: list[dict], history: list[dict] = []) -> str:
+        """Call Claude via AWS Bedrock to synthesise an answer, supporting multi-turn history."""
         try:
             import boto3, json
             region = os.environ.get("AWS_REGION", "us-east-1")
@@ -161,18 +161,26 @@ class RAGService:
                 f"[Chunk {i+1} — {c['doc_id']}]\n{c['content']}"
                 for i, c in enumerate(chunks)
             )
-            prompt = (
-                f"You are a research assistant. Use ONLY the context below to answer the question. "
-                f"If the answer is not in the context, say so clearly.\n\n"
-                f"CONTEXT:\n{context}\n\n"
-                f"QUESTION: {query}\n\n"
-                f"ANSWER:"
-            )
+            # Build messages: prior turns + new question with fresh context
+            messages = [
+                {"role": h["role"], "content": h["content"]}
+                for h in history
+                if h.get("role") in ("user", "assistant") and h.get("content")
+            ]
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"CONTEXT:\n{context}\n\n"
+                    f"QUESTION: {query}\n\n"
+                    f"Answer using ONLY the context above. If the answer is not there, say so."
+                ),
+            })
             client = boto3.client("bedrock-runtime", region_name=region)
             body = json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 512,
-                "messages": [{"role": "user", "content": prompt}],
+                "system": "You are a research assistant. Answer concisely from the provided context only.",
+                "messages": messages,
             })
             response = client.invoke_model(
                 modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",

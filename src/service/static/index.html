@@ -534,6 +534,14 @@
     </div>
   </div>
 
+  <!-- Conversation bar -->
+  <div id="conv-bar" style="display:none;align-items:center;gap:12px;margin-bottom:12px;font-size:13px;color:var(--muted);">
+    <span id="conv-label">&#128172; <strong id="conv-turns">0</strong> turns in conversation</span>
+    <button onclick="clearHistory()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:12px;padding:4px 10px;">
+      &#10005; New conversation
+    </button>
+  </div>
+
   <!-- Upload card -->
   <div class="upload-card">
     <h3>Upload Document</h3>
@@ -613,18 +621,24 @@ async function checkHealth() {
 checkHealth();
 setInterval(checkHealth, 30000);
 
+// ── Conversation history (multi-turn) ───────────────────────────────────────
+let conversationHistory = [];
+
 // ── Search ───────────────────────────────────────────────────────────────────
 const btn      = document.getElementById('search-btn');
-const btnIcon  = document.getElementById('btn-icon');
 const btnLabel = document.getElementById('btn-label');
 
 function setLoading(on) {
   btn.disabled = on;
+  // Always look up btn-icon fresh — avoids stale reference after outerHTML swaps
+  const icon = document.getElementById('btn-icon');
   if (on) {
-    btnIcon.outerHTML = '<span id="btn-icon" class="spinner"></span>';
+    icon.className   = 'spinner';
+    icon.textContent = '';
     btnLabel.textContent = 'Searching…';
   } else {
-    document.getElementById('btn-icon').outerHTML = '<span id="btn-icon">&#9906;</span>';
+    icon.className   = '';
+    icon.innerHTML   = '&#9906;';
     btnLabel.textContent = 'Search';
   }
 }
@@ -645,7 +659,7 @@ async function doSearch() {
     const res = await fetch('/search', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, top_k, rerank, alpha }),
+      body: JSON.stringify({ query, top_k, rerank, alpha, history: conversationHistory }),
     });
 
     if (!res.ok) {
@@ -655,6 +669,10 @@ async function doSearch() {
     }
 
     const data = await res.json();
+    // Append to conversation history for next turn
+    conversationHistory.push({ role: 'user', content: query });
+    if (data.answer) conversationHistory.push({ role: 'assistant', content: data.answer });
+    updateConvBar();
     renderResults(data);
   } catch (e) {
     area.innerHTML = `<div class="error-banner">&#9888; Network error: ${e.message}</div>`;
@@ -749,6 +767,24 @@ function escHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+function updateConvBar() {
+  const bar   = document.getElementById('conv-bar');
+  const turns = Math.floor(conversationHistory.length / 2);
+  if (turns > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('conv-turns').textContent = turns;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearHistory() {
+  conversationHistory = [];
+  updateConvBar();
+  document.getElementById('results-area').innerHTML =
+    '<div class="state-box"><div class="icon">&#128269;</div><p>Conversation cleared. Enter a new query.</p></div>';
+}
+
 // ── Wire up search ───────────────────────────────────────────────────────────
 document.getElementById('query').addEventListener('keydown', e => {
   if (e.key === 'Enter') doSearch();
@@ -763,9 +799,19 @@ const uploadStatus = document.getElementById('upload-status');
 
 function setUploadLoading(on) {
   uploadBtn.disabled = on;
-  upIcon.textContent  = on ? '' : '⬆';
-  upLabel.textContent = on ? 'Uploading…' : 'Upload PDF';
-  if (on) upIcon.outerHTML = '<span id="up-icon" class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></span>';
+  // Always look up up-icon fresh — same stale-reference fix as search button
+  const icon = document.getElementById('up-icon');
+  if (on) {
+    icon.className   = 'spinner';
+    icon.style.cssText = 'border-color:rgba(255,255,255,.3);border-top-color:#fff';
+    icon.textContent = '';
+    upLabel.textContent = 'Uploading…';
+  } else {
+    icon.className   = '';
+    icon.style.cssText = '';
+    icon.textContent = '⬆';
+    upLabel.textContent = 'Upload PDF';
+  }
 }
 
 uploadBtn.addEventListener('click', async () => {
