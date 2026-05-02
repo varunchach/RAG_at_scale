@@ -18,6 +18,11 @@ class SparkEmbedder:
         self.model_name = model_name
         self._model = None  # driver-side model (for embed_batch)
 
+    @property
+    def model(self):
+        """Backward-compatible alias used by some tests/docs."""
+        return self._model
+
     # ------------------------------------------------------------------ #
     # Driver-side helpers                                                  #
     # ------------------------------------------------------------------ #

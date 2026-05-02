@@ -9,23 +9,23 @@
 
 ### 1. Setup Environment
 ```bash
-# Activate your existing venv
-& 'C:\Users\Satej Raste\Downloads\Masai_Learning_Material\krishirakshak-project\venv\Scripts\Activate.ps1'
-
-# Install dependencies
+python3.11 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
+pip install ipykernel jupyterlab nbconvert
 ```
 
 ### 2. Run the Complete Demo
 ```bash
 # Start the notebook
-jupyter notebook RAG_at_Scale_Complete.ipynb
+jupyter notebook RAG_Demo_Docker.ipynb
 ```
 
 ### 3. Run Individual Components
 ```bash
 # Start the service
-python -m src.service.app
+uvicorn src.service.app:app --host 0.0.0.0 --port 8000 --reload
 
 # Start with Docker
 docker-compose -f docker/docker-compose.yml up --build
@@ -35,7 +35,7 @@ docker-compose -f docker/docker-compose.yml up --build
 
 ```
 RAG_at_scale/
-├── RAG_at_Scale_Complete.ipynb    # Main demo notebook
+├── RAG_Demo_Docker.ipynb          # Main demo notebook
 ├── data/                          # Sample data and embeddings
 ├── src/                           # Source code
 │   ├── embeddings/                # PySpark embedding generation
@@ -83,17 +83,46 @@ docker-compose -f docker/docker-compose.yml up --build
 
 ### AWS Deployment
 ```bash
-# Deploy to AWS ECS
+# One-click deploy to AWS (minimal path)
 bash scripts/deploy_aws.sh
+
+# Check deployment status later
+bash scripts/deploy_aws.sh status
 ```
+
+This minimal flow uses:
+
+- an ECR repository
+- a single CloudFormation stack
+- the region's default VPC + public subnets
+- one ECS Fargate cluster + service
+- one internet-facing ALB
+- one CloudWatch log group + ECS IAM roles
+
+First deploy usually takes **8-15 minutes** because it includes Docker build, ECR push, stack creation, and the initial ECS task startup.
+
+If your AWS account does not have a default VPC, the script stops and tells you to create or restore one first.
+
+### Live AWS Demo
+
+Once deployed, show students these AWS console views in order:
+
+1. **CloudFormation**: watch stack creation and outputs
+2. **ECR**: show the pushed application image
+3. **ECS**: show task rollout and service health
+4. **EC2 / Load Balancers**: open the ALB DNS name
+5. **CloudWatch Logs**: show live request logs
+
+The deploy script prints the public app URL when the service becomes healthy.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and configure your settings:
+Optional: create `.env` if you want to override defaults such as `OTLP_ENDPOINT`.
 
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+cat > .env <<'EOF'
+OTLP_ENDPOINT=
+EOF
 ```
 
 ## Sample Data

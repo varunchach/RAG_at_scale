@@ -1,7 +1,11 @@
 # OpenTelemetry Tracing Setup
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
+)
 from opentelemetry.sdk.resources import Resource
 from contextlib import contextmanager
 import logging
@@ -38,8 +42,9 @@ class TracingManager:
             provider.add_span_processor(BatchSpanProcessor(exporter))
             logger.info("OTLP tracing → %s", self.otlp_endpoint)
         else:
-            # Human-readable console output for demos
-            provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+            # Human-readable console output for demos. Use a simple processor so
+            # span logs appear in the same notebook section that generated them.
+            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
             logger.info("Tracing → console (no OTLP endpoint configured)")
 
         trace.set_tracer_provider(provider)

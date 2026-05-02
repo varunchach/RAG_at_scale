@@ -20,6 +20,7 @@ pyarrow              # required for PySpark Pandas UDFs
 # Service & Observability
 fastapi
 uvicorn[standard]
+httpx                # used by FastAPI TestClient
 python-json-logger
 opentelemetry-api
 opentelemetry-sdk
@@ -37,6 +38,7 @@ pytest-cov
 
 # AWS
 boto3
+awscli
 
 # Utilities
 python-multipart

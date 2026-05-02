@@ -8,6 +8,9 @@ logger = logging.getLogger(__name__)
 
 class HybridSearch:
     def __init__(self):
+        # Legacy placeholders retained so older tests/docs still import cleanly.
+        self.vector_client = None
+        self.es_client = None
         self.bm25 = None
         self.corpus: List[str] = []
         self.doc_ids: List[str] = []

@@ -1,5 +1,3 @@
-version: '3.8'
-
 # ── Run the full RAG at Scale demo with ONE command: ──────────────────────
 #   docker-compose -f docker-compose-demo.yml up
 # Then open: http://localhost:8888
@@ -14,11 +12,14 @@ services:
       - "4040:4040"    # Spark UI
     volumes:
       - .:/home/jovyan/work        # mounts entire project into container
+      - ${HOME}/.aws:/home/jovyan/.aws:ro
     working_dir: /home/jovyan/work
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_TOKEN=ragdemo      # open at http://localhost:8888?token=ragdemo
       - HADOOP_HOME=/usr/local/spark
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-6}
     command: >
       bash -c "pip install -q -r requirements_notebook.txt &&
                start-notebook.sh

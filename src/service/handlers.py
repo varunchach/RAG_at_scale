@@ -1,19 +1,39 @@
 # API Endpoint Handlers
-from fastapi import HTTPException
-from typing import List, Dict
-import time
 import logging
-from service.models import (
-    SearchRequest, SearchResponse, SearchResult,
-    EmbeddingRequest, EmbeddingResponse,
-    HealthResponse,
-)
-from retrieval.hybrid_search import HybridSearch
-from retrieval.reranker import Reranker
-from embeddings.spark_embedder import SparkEmbedder
-from observability.logging_config import log_request, log_search_query
-from observability.metrics import metrics
+import time
 from datetime import datetime
+from typing import Dict, List
+
+from fastapi import HTTPException
+
+try:
+    from .models import (
+        EmbeddingRequest,
+        EmbeddingResponse,
+        HealthResponse,
+        SearchRequest,
+        SearchResponse,
+        SearchResult,
+    )
+    from ..embeddings.spark_embedder import SparkEmbedder
+    from ..observability.logging_config import log_search_query
+    from ..observability.metrics import metrics
+    from ..retrieval.hybrid_search import HybridSearch
+    from ..retrieval.reranker import Reranker
+except ImportError:  # Notebook path when `src` is injected into sys.path
+    from service.models import (
+        EmbeddingRequest,
+        EmbeddingResponse,
+        HealthResponse,
+        SearchRequest,
+        SearchResponse,
+        SearchResult,
+    )
+    from embeddings.spark_embedder import SparkEmbedder
+    from observability.logging_config import log_search_query
+    from observability.metrics import metrics
+    from retrieval.hybrid_search import HybridSearch
+    from retrieval.reranker import Reranker
 
 logger = logging.getLogger(__name__)
 

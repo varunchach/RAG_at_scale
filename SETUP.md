@@ -22,6 +22,12 @@ Run the full demo locally on **Windows, macOS, or Linux** using a Python 3.11 vi
 ### Install Java
 
 - **Windows / macOS / Linux**: https://adoptium.net/temurin/releases/?version=17
+- **macOS (Homebrew alternative)**:
+  ```bash
+  brew install openjdk@17
+  export JAVA_HOME="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home"
+  export PATH="$JAVA_HOME/bin:$PATH"
+  ```
 - Verify: `java -version`
 
 ---
@@ -74,14 +80,14 @@ source venv/bin/activate
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install ipykernel jupyterlab nbconvert
 ```
 
-> Installation takes 3-10 minutes (downloads PyTorch + sentence-transformers models).
+> Installation takes 3-10 minutes and may download large ML models on first run.
 
 ### 4. Register the Jupyter kernel
 
 ```bash
-pip install ipykernel
 python -m ipykernel install --user --name rag-at-scale --display-name "RAG at Scale (py3.11)"
 ```
 
@@ -100,6 +106,11 @@ Enter your:
 Verify access:
 ```bash
 aws sts get-caller-identity
+```
+
+Optional for newer Bedrock models that require an inference profile:
+```bash
+export BEDROCK_MODEL_ID="your-inference-profile-id-or-arn"
 ```
 
 ---
@@ -124,6 +135,28 @@ jupyter lab
 
 Open `RAG_Demo_Docker.ipynb`, select kernel **"RAG at Scale (py3.11)"**, then run.
 
+### Execute non-interactively (useful for smoke tests)
+
+```bash
+jupyter nbconvert --to notebook --execute RAG_Demo_Docker.ipynb --output RAG_Demo_Docker.executed.ipynb
+```
+
+> If AWS credentials are not configured yet, the Bedrock setup cell will warn you, but the rest of the notebook should still run.
+
+---
+
+## Running the Application
+
+```bash
+uvicorn src.service.app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open:
+
+- API docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health`
+- Metrics: `http://localhost:8001/metrics`
+
 ### In Cursor
 
 1. Open project folder in Cursor
@@ -138,7 +171,7 @@ Open `RAG_Demo_Docker.ipynb`, select kernel **"RAG at Scale (py3.11)"**, then ru
 ```
 RAG_at_scale/
 ├── RAG_Demo_Docker.ipynb   # Main demo notebook (start here)
-├── requirements.txt         # All Python dependencies
+├── requirements.txt         # Local Python dependencies (includes AWS CLI + tests)
 ├── data/
 │   └── raw/                 # 5 sample .txt documents (RAG/ML themed)
 ├── src/
@@ -165,6 +198,7 @@ RAG_at_scale/
 | Kernel not appearing in VS Code | Re-run `python -m ipykernel install --user --name rag-at-scale` |
 | AWS `UnrecognizedClientException` | Run `aws configure` and enter valid credentials |
 | Bedrock `AccessDeniedException` | Enable model access in AWS Console → Bedrock → Model Access |
+| `ModuleNotFoundError: service` or `retrieval` | Run the app with `uvicorn src.service.app:app` from the repo root |
 
 ---
 
@@ -179,3 +213,63 @@ docker-compose -f docker-compose-demo.yml up
 ```
 
 The Docker image includes Python, PySpark, and all dependencies pre-installed.
+
+---
+
+## One-Click AWS Deployment
+
+The repository now includes a one-command AWS deployment path for the FastAPI service using:
+
+- CloudFormation
+- Amazon ECR
+- Amazon ECS Fargate
+- Application Load Balancer
+- CloudWatch Logs
+
+### Prerequisites
+
+- Docker Desktop running locally
+- AWS CLI configured with permissions for CloudFormation, ECS, ECR, IAM, EC2, ELBv2, and CloudWatch Logs
+- A default VPC with at least 2 public subnets in your target AWS region
+
+### Deploy
+
+```bash
+bash scripts/deploy_aws.sh
+```
+
+### Check Status
+
+```bash
+bash scripts/deploy_aws.sh status
+```
+
+### Expected Time
+
+The first deployment usually takes **8-15 minutes**:
+
+1. discover the default VPC and public subnets
+2. create/update the ECR repository
+3. build Docker image
+4. push image to ECR
+5. create/update the ECS Fargate + ALB stack
+6. wait for ALB health checks to pass
+
+This is intentionally the minimal from-scratch path:
+
+- one shell command
+- one CloudFormation stack
+- one ECS Fargate service
+- one public ALB
+- one CloudWatch log group
+- default VPC networking
+
+### AWS Console Walkthrough for Students
+
+After deployment, use these pages for a live demo:
+
+1. **CloudFormation** → stack events and outputs
+2. **ECR** → pushed image
+3. **ECS** → service, tasks, health checks
+4. **ALB DNS name** → live app endpoint
+5. **CloudWatch Logs** → live request logs

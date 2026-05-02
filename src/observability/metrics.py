@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 class MetricsManager:
     def __init__(self):
+        self._metrics_server_started = False
+        self._metrics_server_port: int | None = None
         # Counters
         self.requests_total = Counter(
             'rag_requests_total',
@@ -55,7 +57,24 @@ class MetricsManager:
 
     def start_server(self, port: int = 8001):
         """Start Prometheus metrics server"""
-        start_http_server(port)
+        if self._metrics_server_started:
+            logger.info(
+                "Prometheus metrics server already running on port %s",
+                self._metrics_server_port,
+            )
+            return
+
+        try:
+            start_http_server(port)
+        except OSError as exc:
+            if self._metrics_server_port == port:
+                logger.info("Prometheus metrics server already bound on port %s", port)
+                self._metrics_server_started = True
+                return
+            raise exc
+
+        self._metrics_server_started = True
+        self._metrics_server_port = port
         logger.info(f"Prometheus metrics server started on port {port}")
 
     def measure_time(self, metric: Histogram) -> Callable:

@@ -1,14 +1,24 @@
 # FastAPI Application
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from service.handlers import rag_service
-from service.models import SearchRequest, EmbeddingRequest
-from observability.logging_config import StructuredLogger
-from observability.metrics import metrics
-from observability.tracing import tracing_manager
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+try:
+    from .handlers import rag_service
+    from .models import SearchRequest, EmbeddingRequest
+    from ..observability.logging_config import StructuredLogger
+    from ..observability.metrics import metrics
+    from ..observability.tracing import tracing_manager
+except ImportError:  # Notebook path when `src` is injected into sys.path
+    from service.handlers import rag_service
+    from service.models import SearchRequest, EmbeddingRequest
+    from observability.logging_config import StructuredLogger
+    from observability.metrics import metrics
+    from observability.tracing import tracing_manager
 
 # Setup logging
 StructuredLogger.setup_logging(json_format=True)
@@ -29,10 +39,19 @@ async def lifespan(app: FastAPI):
         {"id": "2", "content": "Another document discussing artificial intelligence."},
         {"id": "3", "content": "Document about natural language processing and transformers."}
     ]
-    sample_embeddings = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]]  # Mock embeddings
-
     # Only initialize if notebook hasn't already done so with real data
     if not rag_service.search_engine:
+        try:
+            sample_embeddings = await asyncio.to_thread(
+                rag_service.embedder.embed_batch,
+                [doc["content"] for doc in sample_docs],
+            )
+        except Exception:
+            logger.exception(
+                "Failed to precompute sample embeddings; starting with sparse-only search"
+            )
+            sample_embeddings = []
+
         rag_service.initialize_search(sample_docs, sample_embeddings)
 
     yield
@@ -77,12 +96,12 @@ async def generate_embeddings(request: EmbeddingRequest):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception: {str(exc)}", exc_info=True)
-    return {"error": "Internal server error"}
+    return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "app:app",
+        "src.service.app:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
