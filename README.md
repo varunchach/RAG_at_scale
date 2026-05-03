@@ -115,6 +115,12 @@ Once deployed, show students these AWS console views in order:
 
 The deploy script prints the public app URL when the service becomes healthy.
 
+
+<img width="1892" height="1045" alt="image" src="https://github.com/user-attachments/assets/cf83dd36-3831-441b-807f-d96db6769ce4" />
+
+
+
+
 ## Configuration
 
 Optional: create `.env` if you want to override defaults such as `OTLP_ENDPOINT`.
