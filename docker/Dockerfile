@@ -27,16 +27,30 @@ FROM base as production
 COPY src/ ./src/
 COPY data/raw/ ./data/raw/
 
-# Create non-root user
+# Create non-root user and set ownership before switching
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /app
+
 USER app
+
+# Pre-download ML models as the app user so the cache path matches runtime.
+# Without this, models download from HuggingFace on every cold start (~170 MB,
+# 60-90s) and fail if HuggingFace is unreachable from the container.
+RUN python -c "\
+from sentence_transformers import SentenceTransformer, CrossEncoder; \
+SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); \
+CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2'); \
+print('Models pre-downloaded OK')"
+
+# Disable runtime HuggingFace network calls — models are baked into the image.
+ENV TRANSFORMERS_OFFLINE=1
+ENV HF_DATASETS_OFFLINE=1
 
 # Expose ports
 EXPOSE 8000 8001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+# Generous start period — sentence-transformers loads ~170 MB of weights on first inference.
+HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=5 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application

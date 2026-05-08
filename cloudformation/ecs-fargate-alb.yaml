@@ -89,6 +89,18 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: CloudWatchLogsExtended
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${ProjectName}-service:*'
 
   TaskRole:
     Type: AWS::IAM::Role
@@ -109,6 +121,17 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                   - bedrock:InvokeModelWithResponseStream
+                  - bedrock:ListFoundationModels
+                Resource: '*'
+        - PolicyName: CloudWatchMetrics
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:ListMetrics
                 Resource: '*'
 
   LogGroup:
@@ -239,6 +262,174 @@ Resources:
           ContainerPort: !Ref ContainerPort
       TaskDefinition: !Ref TaskDefinition
 
+  ObservabilityDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${ProjectName}-observability'
+      DashboardBody: !Sub
+        - >
+          {
+            "widgets": [
+              {
+                "type": "text",
+                "x": 0, "y": 0, "width": 24, "height": 2,
+                "properties": {
+                  "markdown": "# RAG at Scale — Observability Dashboard\nCluster: **${ProjectName}-cluster** | Service: **${ProjectName}-service** | Region: **${AWS::Region}**\n\n> _ECS Fargate + ALB metrics. Container Insights enabled. Logs stream to CloudWatch._"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0, "y": 2, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ECS CPU Utilization (%)",
+                  "view": "timeSeries",
+                  "stat": "Average",
+                  "period": 60,
+                  "metrics": [
+                    ["ECS/ContainerInsights", "CpuUtilized", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "CPU Used (vCPU)"}],
+                    ["ECS/ContainerInsights", "CpuReserved", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "CPU Reserved (vCPU)", "color": "#aec7e8"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8, "y": 2, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ECS Memory Utilization (MB)",
+                  "view": "timeSeries",
+                  "stat": "Average",
+                  "period": 60,
+                  "metrics": [
+                    ["ECS/ContainerInsights", "MemoryUtilized", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Memory Used (MB)"}],
+                    ["ECS/ContainerInsights", "MemoryReserved", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Memory Reserved (MB)", "color": "#aec7e8"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16, "y": 2, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ECS Running Tasks",
+                  "view": "timeSeries",
+                  "stat": "Average",
+                  "period": 60,
+                  "metrics": [
+                    ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Running Tasks", "color": "#2ca02c"}],
+                    ["ECS/ContainerInsights", "DesiredTaskCount", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Desired Tasks", "color": "#aec7e8"}],
+                    ["ECS/ContainerInsights", "PendingTaskCount", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Pending Tasks", "color": "#ff7f0e"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0, "y": 8, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ALB — Request Count (per minute)",
+                  "view": "timeSeries",
+                  "stat": "Sum",
+                  "period": 60,
+                  "metrics": [
+                    ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${AlbId}", {"label": "Total Requests", "color": "#1f77b4"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8, "y": 8, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ALB — Target Response Time (ms)",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${AlbId}", {"stat": "p50", "label": "p50 Latency"}],
+                    ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${AlbId}", {"stat": "p95", "label": "p95 Latency", "color": "#ff7f0e"}],
+                    ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${AlbId}", {"stat": "p99", "label": "p99 Latency", "color": "#d62728"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}},
+                  "annotations": {
+                    "horizontal": [{"label": "2s SLA", "value": 2, "color": "#d62728"}]
+                  }
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16, "y": 8, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ALB — HTTP Error Rates",
+                  "view": "timeSeries",
+                  "stat": "Sum",
+                  "period": 60,
+                  "metrics": [
+                    ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", "${AlbId}", {"label": "4xx Client Errors", "color": "#ff7f0e"}],
+                    ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "${AlbId}", {"label": "5xx Server Errors", "color": "#d62728"}],
+                    ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count",    "LoadBalancer", "${AlbId}", {"label": "5xx ALB Errors",    "color": "#9467bd"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0, "y": 14, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ALB — Healthy Targets",
+                  "view": "timeSeries",
+                  "stat": "Average",
+                  "period": 60,
+                  "metrics": [
+                    ["AWS/ApplicationELB", "HealthyHostCount",   "TargetGroup", "${TgId}", "LoadBalancer", "${AlbId}", {"label": "Healthy", "color": "#2ca02c"}],
+                    ["AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${TgId}", "LoadBalancer", "${AlbId}", {"label": "Unhealthy", "color": "#d62728"}]
+                  ],
+                  "yAxis": {"left": {"min": 0, "max": 5}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8, "y": 14, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ALB — Active Connections",
+                  "view": "timeSeries",
+                  "stat": "Sum",
+                  "period": 60,
+                  "metrics": [
+                    ["AWS/ApplicationELB", "ActiveConnectionCount", "LoadBalancer", "${AlbId}", {"label": "Active Connections", "color": "#17becf"}],
+                    ["AWS/ApplicationELB", "NewConnectionCount",    "LoadBalancer", "${AlbId}", {"label": "New Connections",    "color": "#bcbd22"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16, "y": 14, "width": 8, "height": 6,
+                "properties": {
+                  "title": "ALB — Processed Bytes",
+                  "view": "timeSeries",
+                  "stat": "Sum",
+                  "period": 60,
+                  "metrics": [
+                    ["AWS/ApplicationELB", "ProcessedBytes", "LoadBalancer", "${AlbId}", {"label": "Bytes Processed", "color": "#8c564b"}]
+                  ],
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "log",
+                "x": 0, "y": 20, "width": 24, "height": 8,
+                "properties": {
+                  "title": "Application Logs — Live Stream (/ecs/${ProjectName}-service)",
+                  "query": "SOURCE '/ecs/${ProjectName}-service' | fields @timestamp, @message | sort @timestamp desc | limit 50",
+                  "region": "${AWS::Region}",
+                  "view": "table"
+                }
+              }
+            ]
+          }
+        - AlbId: !Select [1, !Split ["loadbalancer/", !GetAtt LoadBalancer.LoadBalancerArn]]
+          TgId:  !Select [1, !Split ["targetgroup/",  !GetAtt TargetGroup.TargetGroupArn]]
+
 Outputs:
   ClusterName:
     Description: ECS cluster name.
@@ -258,3 +449,6 @@ Outputs:
   LoadBalancerUrl:
     Description: Public service URL.
     Value: !Sub 'http://${LoadBalancer.DNSName}'
+  DashboardUrl:
+    Description: CloudWatch Observability Dashboard URL.
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ProjectName}-observability'

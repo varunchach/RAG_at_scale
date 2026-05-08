@@ -3,10 +3,11 @@ pyspark==3.5.0
 pandas
 numpy
 
-# ML & Embeddings
+# ML & Embeddings — CPU-only torch keeps the Docker image ~250 MB instead of ~2 GB
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 sentence-transformers
-onnxruntime          # use onnxruntime-gpu only if CUDA toolkit is installed
+onnxruntime
 transformers
 
 # Vector & Search
