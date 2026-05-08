@@ -1,9 +1,10 @@
 # Structured Logging Configuration
 import logging
 import logging.config
-from pythonjsonlogger import jsonlogger
 import sys
 from typing import Dict, Any
+
+from pythonjsonlogger import jsonlogger
 
 class StructuredLogger:
     @staticmethod
@@ -66,4 +67,37 @@ def log_search_query(query: str, results_count: int, duration: float):
         'query_length': len(query),
         'results_count': results_count,
         'duration_seconds': duration
+    })
+
+
+def log_eval_result(
+    request_id: str,
+    query: str,
+    scores: Dict[str, float],
+    sampled: bool,
+    verdict: str,
+    reasoning: str,
+    model_id: str,
+):
+    """Log completed LLM-as-judge evaluation."""
+    logger.info("LLM Judge Evaluation Completed", extra={
+        'request_id': request_id,
+        'query_preview': query[:160],
+        'sampled': sampled,
+        'faithfulness': scores.get('faithfulness'),
+        'context_precision': scores.get('context_precision'),
+        'context_coverage': scores.get('context_coverage'),
+        'answer_relevancy': scores.get('answer_relevancy'),
+        'judge_verdict': verdict,
+        'judge_reasoning': reasoning,
+        'judge_model_id': model_id,
+    })
+
+
+def log_eval_failure(request_id: str, error: str, sampled: bool):
+    """Log failed LLM-as-judge evaluation without breaking the main flow."""
+    logger.warning("LLM Judge Evaluation Failed", extra={
+        'request_id': request_id,
+        'sampled': sampled,
+        'error': error,
     })

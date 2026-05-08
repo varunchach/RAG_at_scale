@@ -1,0 +1,320 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R] /Count 5 >>
+endobj
+3 0 obj
+<< /Length 2698 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm (APP ASSEMBLY GUIDE) Tj
+1 0 0 1 54 724 Tm () Tj
+1 0 0 1 54 710 Tm (# RAG at Scale App Assembly Guide) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (This guide explains how to assemble, run, and deploy the complete application in a way) Tj
+1 0 0 1 54 668 Tm (that is easy to demo and safe to operate.) Tj
+1 0 0 1 54 654 Tm () Tj
+1 0 0 1 54 640 Tm (## What You Are Building) Tj
+1 0 0 1 54 626 Tm () Tj
+1 0 0 1 54 612 Tm (The repo contains two closely related application shapes:) Tj
+1 0 0 1 54 598 Tm () Tj
+1 0 0 1 54 584 Tm (- `rag-at-scale`: the baseline RAG demo app without LLM-as-judge enabled) Tj
+1 0 0 1 54 570 Tm (- `rag-at-scale-eval`: the eval-enabled app that adds asynchronous judge scoring,) Tj
+1 0 0 1 54 556 Tm (  CloudWatch custom metrics, and an eval-specific dashboard) Tj
+1 0 0 1 54 542 Tm () Tj
+1 0 0 1 54 528 Tm (Both apps use the same FastAPI service code and the same ECS Fargate + ALB deployment) Tj
+1 0 0 1 54 514 Tm (shape, but they run as separate stacks, services, and images so one can stay stable) Tj
+1 0 0 1 54 500 Tm (while the other is used for experiments and evaluation.) Tj
+1 0 0 1 54 486 Tm () Tj
+1 0 0 1 54 472 Tm (## Architecture) Tj
+1 0 0 1 54 458 Tm () Tj
+1 0 0 1 54 444 Tm (```mermaid) Tj
+1 0 0 1 54 430 Tm (flowchart LR) Tj
+1 0 0 1 54 416 Tm (    user[UserBrowserOrAPIClient] --> alb[ApplicationLoadBalancer]) Tj
+1 0 0 1 54 402 Tm (    alb --> app[FastAPIService]) Tj
+1 0 0 1 54 388 Tm (    app --> retrieval[HybridRetrieval]) Tj
+1 0 0 1 54 374 Tm (    retrieval --> reranker[CrossEncoderReranker]) Tj
+1 0 0 1 54 360 Tm (    reranker --> answerGen[BedrockAnswerGeneration]) Tj
+1 0 0 1 54 346 Tm (    answerGen --> response[UserResponse]) Tj
+1 0 0 1 54 332 Tm (    response --> judgeTrigger[AsyncEvalTrigger]) Tj
+1 0 0 1 54 318 Tm (    judgeTrigger --> judge[BedrockLLMJudge]) Tj
+1 0 0 1 54 304 Tm (    judge --> cwMetrics[CloudWatchCustomMetrics]) Tj
+1 0 0 1 54 290 Tm (    judge --> cwLogs[CloudWatchStructuredLogs]) Tj
+1 0 0 1 54 276 Tm (    app --> cwInfra[CloudWatchInfraDashboard]) Tj
+1 0 0 1 54 262 Tm (    cwMetrics --> cwEval[EvalDashboardWidgets]) Tj
+1 0 0 1 54 248 Tm (    cwLogs --> cwEval) Tj
+1 0 0 1 54 234 Tm (    docs[\(PDFOrTextCorpus\)] --> app) Tj
+1 0 0 1 54 220 Tm (```) Tj
+1 0 0 1 54 206 Tm () Tj
+1 0 0 1 54 192 Tm (## Assembly Steps) Tj
+1 0 0 1 54 178 Tm () Tj
+1 0 0 1 54 164 Tm (### Step 1: Clone and set up the local Python environment) Tj
+1 0 0 1 54 150 Tm () Tj
+1 0 0 1 54 136 Tm (Create a Python 3.11 virtual environment, activate it, and install the local) Tj
+1 0 0 1 54 122 Tm (dependencies.) Tj
+1 0 0 1 54 108 Tm () Tj
+1 0 0 1 54 94 Tm (```bash) Tj
+1 0 0 1 54 80 Tm (python3.11 -m venv venv) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 2209 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm (source venv/bin/activate) Tj
+1 0 0 1 54 724 Tm (pip install --upgrade pip) Tj
+1 0 0 1 54 710 Tm (pip install -r requirements.txt) Tj
+1 0 0 1 54 696 Tm (pip install ipykernel jupyterlab nbconvert) Tj
+1 0 0 1 54 682 Tm (```) Tj
+1 0 0 1 54 668 Tm () Tj
+1 0 0 1 54 654 Tm (### Step 2: Run the app locally) Tj
+1 0 0 1 54 640 Tm () Tj
+1 0 0 1 54 626 Tm (Start the FastAPI service:) Tj
+1 0 0 1 54 612 Tm () Tj
+1 0 0 1 54 598 Tm (```bash) Tj
+1 0 0 1 54 584 Tm (uvicorn src.service.app:app --host 0.0.0.0 --port 8000 --reload) Tj
+1 0 0 1 54 570 Tm (```) Tj
+1 0 0 1 54 556 Tm () Tj
+1 0 0 1 54 542 Tm (Useful endpoints:) Tj
+1 0 0 1 54 528 Tm () Tj
+1 0 0 1 54 514 Tm (- `GET /`) Tj
+1 0 0 1 54 500 Tm (- `GET /health`) Tj
+1 0 0 1 54 486 Tm (- `GET /docs`) Tj
+1 0 0 1 54 472 Tm (- `POST /search`) Tj
+1 0 0 1 54 458 Tm (- `POST /ingest`) Tj
+1 0 0 1 54 444 Tm () Tj
+1 0 0 1 54 430 Tm (### Step 3: Understand how documents enter the system) Tj
+1 0 0 1 54 416 Tm () Tj
+1 0 0 1 54 402 Tm (The application starts with a small `.txt` corpus from `data/raw/`.) Tj
+1 0 0 1 54 388 Tm () Tj
+1 0 0 1 54 374 Tm (Additional PDFs are ingested through `POST /ingest`:) Tj
+1 0 0 1 54 360 Tm () Tj
+1 0 0 1 54 346 Tm (1. text is extracted from the PDF) Tj
+1 0 0 1 54 332 Tm (2. text is normalized and chunked) Tj
+1 0 0 1 54 318 Tm (3. chunks are embedded) Tj
+1 0 0 1 54 304 Tm (4. the hybrid index is updated) Tj
+1 0 0 1 54 290 Tm (5. the total in-memory document count increases) Tj
+1 0 0 1 54 276 Tm () Tj
+1 0 0 1 54 262 Tm (Chunking currently happens in `src/service/ingest.py` using:) Tj
+1 0 0 1 54 248 Tm () Tj
+1 0 0 1 54 234 Tm (- chunk size: `500` characters) Tj
+1 0 0 1 54 220 Tm (- overlap: `50` characters) Tj
+1 0 0 1 54 206 Tm () Tj
+1 0 0 1 54 192 Tm (### Step 4: Build the baseline production image) Tj
+1 0 0 1 54 178 Tm () Tj
+1 0 0 1 54 164 Tm (The main production image is defined in `docker/Dockerfile`.) Tj
+1 0 0 1 54 150 Tm () Tj
+1 0 0 1 54 136 Tm (That image:) Tj
+1 0 0 1 54 122 Tm () Tj
+1 0 0 1 54 108 Tm (1. installs the runtime dependencies) Tj
+1 0 0 1 54 94 Tm (2. copies the app source and startup documents) Tj
+1 0 0 1 54 80 Tm (3. pre-downloads the embedding and reranker models) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 2181 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm (4. runs the app through `uvicorn`) Tj
+1 0 0 1 54 724 Tm () Tj
+1 0 0 1 54 710 Tm (The baseline AWS deploy script is:) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (```bash) Tj
+1 0 0 1 54 668 Tm (bash scripts/deploy_aws.sh) Tj
+1 0 0 1 54 654 Tm (```) Tj
+1 0 0 1 54 640 Tm () Tj
+1 0 0 1 54 626 Tm (This provisions:) Tj
+1 0 0 1 54 612 Tm () Tj
+1 0 0 1 54 598 Tm (- ECR) Tj
+1 0 0 1 54 584 Tm (- ECS Fargate) Tj
+1 0 0 1 54 570 Tm (- ALB) Tj
+1 0 0 1 54 556 Tm (- CloudWatch log group) Tj
+1 0 0 1 54 542 Tm (- CloudWatch operational dashboard) Tj
+1 0 0 1 54 528 Tm () Tj
+1 0 0 1 54 514 Tm (### Step 5: Build the eval app as a separate image) Tj
+1 0 0 1 54 500 Tm () Tj
+1 0 0 1 54 486 Tm (The eval app uses the same service code but must not replace the baseline app image.) Tj
+1 0 0 1 54 472 Tm () Tj
+1 0 0 1 54 458 Tm (For that reason, the repo includes a separate image path:) Tj
+1 0 0 1 54 444 Tm () Tj
+1 0 0 1 54 430 Tm (- `docker/Dockerfile.eval`) Tj
+1 0 0 1 54 416 Tm (- `requirements.eval.txt`) Tj
+1 0 0 1 54 402 Tm (- `buildspec.eval.yml`) Tj
+1 0 0 1 54 388 Tm (- `scripts/deploy_eval_app.sh`) Tj
+1 0 0 1 54 374 Tm () Tj
+1 0 0 1 54 360 Tm (The eval image strategy is intentionally conservative:) Tj
+1 0 0 1 54 346 Tm () Tj
+1 0 0 1 54 332 Tm (1. start from the already-working baseline production image) Tj
+1 0 0 1 54 318 Tm (2. overlay only the updated `src/` tree) Tj
+1 0 0 1 54 304 Tm (3. build remotely on native `amd64`) Tj
+1 0 0 1 54 290 Tm (4. publish to a separate ECR repo) Tj
+1 0 0 1 54 276 Tm () Tj
+1 0 0 1 54 262 Tm (This prevents the current baseline app from being overwritten.) Tj
+1 0 0 1 54 248 Tm () Tj
+1 0 0 1 54 234 Tm (### Step 6: Deploy the baseline app stack) Tj
+1 0 0 1 54 220 Tm () Tj
+1 0 0 1 54 206 Tm (The baseline stack name and project name are:) Tj
+1 0 0 1 54 192 Tm () Tj
+1 0 0 1 54 178 Tm (- stack: `rag-at-scale`) Tj
+1 0 0 1 54 164 Tm (- project: `rag-at-scale`) Tj
+1 0 0 1 54 150 Tm () Tj
+1 0 0 1 54 136 Tm (This creates resources such as:) Tj
+1 0 0 1 54 122 Tm () Tj
+1 0 0 1 54 108 Tm (- `rag-at-scale-cluster`) Tj
+1 0 0 1 54 94 Tm (- `rag-at-scale-service`) Tj
+1 0 0 1 54 80 Tm (- `/ecs/rag-at-scale-service`) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 2213 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm (- `rag-at-scale-observability`) Tj
+1 0 0 1 54 724 Tm () Tj
+1 0 0 1 54 710 Tm (### Step 7: Deploy the eval app stack) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (The eval stack uses a second, fully isolated name set:) Tj
+1 0 0 1 54 668 Tm () Tj
+1 0 0 1 54 654 Tm (- stack: `rag-at-scale-eval`) Tj
+1 0 0 1 54 640 Tm (- project: `rag-at-scale-eval`) Tj
+1 0 0 1 54 626 Tm (- ECR repo: `rag-at-scale-eval-service`) Tj
+1 0 0 1 54 612 Tm (- dashboard: `rag-at-scale-eval-observability`) Tj
+1 0 0 1 54 598 Tm (- metric namespace: `RAGAtScaleEval/Application`) Tj
+1 0 0 1 54 584 Tm () Tj
+1 0 0 1 54 570 Tm (Deploy it with:) Tj
+1 0 0 1 54 556 Tm () Tj
+1 0 0 1 54 542 Tm (```bash) Tj
+1 0 0 1 54 528 Tm (bash scripts/deploy_eval_app.sh deploy) Tj
+1 0 0 1 54 514 Tm (```) Tj
+1 0 0 1 54 500 Tm () Tj
+1 0 0 1 54 486 Tm (This path:) Tj
+1 0 0 1 54 472 Tm () Tj
+1 0 0 1 54 458 Tm (1. packages the eval source bundle) Tj
+1 0 0 1 54 444 Tm (2. uploads it to S3) Tj
+1 0 0 1 54 430 Tm (3. triggers an AWS CodeBuild job on native `amd64`) Tj
+1 0 0 1 54 416 Tm (4. pushes the eval image into its own ECR repo) Tj
+1 0 0 1 54 402 Tm (5. deploys a second ECS Fargate stack with eval flags enabled) Tj
+1 0 0 1 54 388 Tm () Tj
+1 0 0 1 54 374 Tm (### Step 8: Verify operational observability) Tj
+1 0 0 1 54 360 Tm () Tj
+1 0 0 1 54 346 Tm (The baseline dashboard shows operational metrics such as:) Tj
+1 0 0 1 54 332 Tm () Tj
+1 0 0 1 54 318 Tm (- ECS CPU and memory) Tj
+1 0 0 1 54 304 Tm (- request count) Tj
+1 0 0 1 54 290 Tm (- target latency) Tj
+1 0 0 1 54 276 Tm (- HTTP errors) Tj
+1 0 0 1 54 262 Tm (- healthy targets) Tj
+1 0 0 1 54 248 Tm (- logs) Tj
+1 0 0 1 54 234 Tm () Tj
+1 0 0 1 54 220 Tm (The eval dashboard adds:) Tj
+1 0 0 1 54 206 Tm () Tj
+1 0 0 1 54 192 Tm (- `FaithfulnessScore`) Tj
+1 0 0 1 54 178 Tm (- `ContextPrecisionScore`) Tj
+1 0 0 1 54 164 Tm (- `ContextCoverageScore`) Tj
+1 0 0 1 54 150 Tm (- `AnswerRelevancyScore`) Tj
+1 0 0 1 54 136 Tm (- `EvalSampleCount`) Tj
+1 0 0 1 54 122 Tm (- application latency metrics such as search, rerank, generation, and end-to-end latency) Tj
+1 0 0 1 54 108 Tm () Tj
+1 0 0 1 54 94 Tm (### Step 9: Verify the LLM-as-judge flow) Tj
+1 0 0 1 54 80 Tm () Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 2224 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm (The eval app runs the judge asynchronously after the user response is already sent.) Tj
+1 0 0 1 54 724 Tm () Tj
+1 0 0 1 54 710 Tm (Inputs used by the judge:) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (- user query) Tj
+1 0 0 1 54 668 Tm (- reranked chunks) Tj
+1 0 0 1 54 654 Tm (- final answer) Tj
+1 0 0 1 54 640 Tm () Tj
+1 0 0 1 54 626 Tm (Outputs written to CloudWatch:) Tj
+1 0 0 1 54 612 Tm () Tj
+1 0 0 1 54 598 Tm (- custom metrics) Tj
+1 0 0 1 54 584 Tm (- structured logs containing the judge verdict and per-score values) Tj
+1 0 0 1 54 570 Tm () Tj
+1 0 0 1 54 556 Tm (## Safe Operating Rules) Tj
+1 0 0 1 54 542 Tm () Tj
+1 0 0 1 54 528 Tm (To keep demos stable:) Tj
+1 0 0 1 54 514 Tm () Tj
+1 0 0 1 54 500 Tm (1. never update the baseline `rag-at-scale` stack while preparing the eval app) Tj
+1 0 0 1 54 486 Tm (2. never push eval builds into the baseline ECR repo) Tj
+1 0 0 1 54 472 Tm (3. use separate stack names, service names, dashboards, and metric namespaces) Tj
+1 0 0 1 54 458 Tm (4. treat the eval app as disposable and the baseline app as the safe fallback) Tj
+1 0 0 1 54 444 Tm () Tj
+1 0 0 1 54 430 Tm (## Suggested Demo Flow) Tj
+1 0 0 1 54 416 Tm () Tj
+1 0 0 1 54 402 Tm (1. Open the baseline app to show the stable production path.) Tj
+1 0 0 1 54 388 Tm (2. Open the eval app to show the same search experience plus extra observability.) Tj
+1 0 0 1 54 374 Tm (3. Ingest the `nexus_research_bulletin_2025.pdf` into the eval app.) Tj
+1 0 0 1 54 360 Tm (4. Ask a fact-rich question.) Tj
+1 0 0 1 54 346 Tm (5. Show the answer, retrieved chunks, then the eval dashboard and CloudWatch logs.) Tj
+1 0 0 1 54 332 Tm () Tj
+1 0 0 1 54 318 Tm (## Key Files) Tj
+1 0 0 1 54 304 Tm () Tj
+1 0 0 1 54 290 Tm (- `README.md`) Tj
+1 0 0 1 54 276 Tm (- `SETUP.md`) Tj
+1 0 0 1 54 262 Tm (- `DEPLOYMENT_STATUS.md`) Tj
+1 0 0 1 54 248 Tm (- `src/service/handlers.py`) Tj
+1 0 0 1 54 234 Tm (- `src/service/ingest.py`) Tj
+1 0 0 1 54 220 Tm (- `src/observability/evals.py`) Tj
+1 0 0 1 54 206 Tm (- `src/observability/metrics.py`) Tj
+1 0 0 1 54 192 Tm (- `cloudformation/ecs-fargate-alb.yaml`) Tj
+1 0 0 1 54 178 Tm (- `scripts/deploy_aws.sh`) Tj
+1 0 0 1 54 164 Tm (- `scripts/deploy_eval_app.sh`) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000162 00000 n 
+0000002912 00000 n 
+0000003038 00000 n 
+0000005299 00000 n 
+0000005425 00000 n 
+0000007658 00000 n 
+0000007784 00000 n 
+0000010049 00000 n 
+0000010176 00000 n 
+0000012453 00000 n 
+0000012581 00000 n 
+trailer
+<< /Size 14 /Root 13 0 R >>
+startxref
+12631
+%%EOF

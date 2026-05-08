@@ -1,13 +1,30 @@
-# 🚀 RAG at Scale: Complete Student Demo
+# RAG at Scale
 
-**Topics Covered:**
-1. **RAG at Scale w/ Spark**: Spark embed gen, hybrid search, rerank, Docker, cloud deploy
-2. **Distributed Embeddings**: PySpark UDFs, GPU scheduling, cluster tuning
-3. **Service Observability**: Logs, traces, metrics, autoscale
+This repository contains a teaching-friendly RAG application that demonstrates:
+
+- document ingestion from PDF
+- dense + sparse hybrid retrieval
+- reranking with a cross-encoder
+- answer generation with AWS Bedrock
+- operational observability with logs, traces, metrics, and dashboards
+- an isolated LLM-as-judge deployment for evaluation demos
+
+## What Is In The Repo
+
+- `RAG_Demo_Docker.ipynb`: the main notebook demo
+- `src/`: FastAPI service, retrieval, embeddings, and observability code
+- `data/raw/`: startup sample corpus plus the Nexus PDF used for demos
+- `cloudformation/ecs-fargate-alb.yaml`: ECS Fargate + ALB + CloudWatch infrastructure
+- `scripts/deploy_aws.sh`: baseline app deployment
+- `scripts/deploy_eval_app.sh`: separate eval app deployment via remote amd64 build
+- `docs/APP_ASSEMBLY_GUIDE.md`: end-to-end assembly and deployment guide
+- `docs/NEXUS_SAMPLE_QA.md`: Nexus sample questions and expected answers
+- `DEPLOYMENT_STATUS.md`: current handoff and deployment notes
 
 ## Quick Start
 
-### 1. Setup Environment
+### Local Setup
+
 ```bash
 python3.11 -m venv venv
 source venv/bin/activate
@@ -16,135 +33,110 @@ pip install -r requirements.txt
 pip install ipykernel jupyterlab nbconvert
 ```
 
-### 2. Run the Complete Demo
-```bash
-# Start the notebook
-jupyter notebook RAG_Demo_Docker.ipynb
-```
+### Run The App Locally
 
-### 3. Run Individual Components
 ```bash
-# Start the service
 uvicorn src.service.app:app --host 0.0.0.0 --port 8000 --reload
-
-# Start with Docker
-docker-compose -f docker/docker-compose.yml up --build
 ```
 
-## Project Structure
+Useful local URLs:
 
-```
-RAG_at_scale/
-├── RAG_Demo_Docker.ipynb          # Main demo notebook
-├── data/                          # Sample data and embeddings
-├── src/                           # Source code
-│   ├── embeddings/                # PySpark embedding generation
-│   ├── retrieval/                 # Hybrid search & reranking
-│   ├── observability/             # Logging, tracing, metrics
-│   └── service/                   # FastAPI service
-├── docker/                        # Containerization
-├── kubernetes/                    # Cloud deployment
-├── tests/                         # Unit tests
-└── scripts/                       # Deployment scripts
-```
+- `http://localhost:8000/`
+- `http://localhost:8000/health`
+- `http://localhost:8000/docs`
+- `http://localhost:8001/metrics`
 
-## Learning Outcomes
+### Run The Notebook
 
-By the end of this demo, you'll understand:
-
-✅ **Distributed ML Pipelines**: Build with PySpark  
-✅ **GPU-Accelerated UDFs**: For embedding generation  
-✅ **Hybrid Search Systems**: Dense + sparse retrieval  
-✅ **Reranking**: Cross-encoder relevance scoring  
-✅ **Observability**: Logs, traces, metrics at scale  
-✅ **Containerization**: Docker for ML services  
-✅ **Cloud Deployment**: AWS ECS with auto-scaling  
-
-## API Endpoints
-
-- `GET /` - Service info
-- `GET /health` - Health check
-- `POST /search` - RAG search
-- `POST /embeddings` - Generate embeddings
-
-## Monitoring
-
-- **API**: http://localhost:8000
-- **Metrics**: http://localhost:8001/metrics
-- **Grafana**: http://localhost:3000 (admin/admin)
-
-## Deployment
-
-### Local Development
 ```bash
-# Run everything locally
-docker-compose -f docker/docker-compose.yml up --build
+jupyter lab
 ```
 
-### AWS Deployment
+Open `RAG_Demo_Docker.ipynb` and select the `rag-at-scale` kernel.
+
+## AWS Deployment Modes
+
+There are now two deployment shapes.
+
+### 1. Baseline App
+
+The baseline app is the stable production-style RAG service without eval scoring turned on.
+
 ```bash
-# One-click deploy to AWS (minimal path)
 bash scripts/deploy_aws.sh
-
-# Check deployment status later
-bash scripts/deploy_aws.sh status
 ```
 
-This minimal flow uses:
+This creates resources under the `rag-at-scale` name set.
 
-- an ECR repository
-- a single CloudFormation stack
-- the region's default VPC + public subnets
-- one ECS Fargate cluster + service
-- one internet-facing ALB
-- one CloudWatch log group + ECS IAM roles
+### 2. Separate Eval App
 
-First deploy usually takes **8-15 minutes** because it includes Docker build, ECR push, stack creation, and the initial ECS task startup.
-
-If your AWS account does not have a default VPC, the script stops and tells you to create or restore one first.
-
-### Live AWS Demo
-
-Once deployed, show students these AWS console views in order:
-
-1. **CloudFormation**: watch stack creation and outputs
-2. **ECR**: show the pushed application image
-3. **ECS**: show task rollout and service health
-4. **EC2 / Load Balancers**: open the ALB DNS name
-5. **CloudWatch Logs**: show live request logs
-
-The deploy script prints the public app URL when the service becomes healthy.
-
-
-<img width="1892" height="1045" alt="image" src="https://github.com/user-attachments/assets/cf83dd36-3831-441b-807f-d96db6769ce4" />
-
-
-
-
-## Configuration
-
-Optional: create `.env` if you want to override defaults such as `OTLP_ENDPOINT`.
+The eval app is deployed as a separate stack, image, service, ALB, and dashboard so the baseline app stays untouched.
 
 ```bash
-cat > .env <<'EOF'
-OTLP_ENDPOINT=
-EOF
+bash scripts/deploy_eval_app.sh deploy
 ```
 
-## Sample Data
+This creates resources under the `rag-at-scale-eval` name set and enables:
 
-Generate sample documents for testing:
-```bash
-python scripts/generate_sample_data.py
-```
+- LLM-as-judge scoring
+- CloudWatch custom metrics for evals
+- eval-specific dashboard widgets
+
+## Two-Stack Model
+
+The repo intentionally supports two parallel AWS apps:
+
+- `rag-at-scale`
+  - baseline app
+  - safe fallback during demos
+- `rag-at-scale-eval`
+  - eval-enabled app
+  - judge scores and eval dashboard
+
+This keeps the demo stable while still allowing experiments.
+
+## Recommended Demo Flow
+
+1. Show the baseline app first.
+2. Show the eval app second.
+3. Ingest `data/raw/nexus_research_bulletin_2025.pdf` into the eval app.
+4. Ask a fact-rich Nexus question.
+5. Show the answer, then open the eval dashboard and log stream.
+
+## Documentation
+
+- setup guide: `SETUP.md`
+- assembly guide: `docs/APP_ASSEMBLY_GUIDE.md`
+- Nexus Q&A guide: `docs/NEXUS_SAMPLE_QA.md`
+- deployment handoff: `DEPLOYMENT_STATUS.md`
 
 ## Testing
 
-Run the test suite:
+Run the focused test suite with:
+
+```bash
+pytest tests/test_service.py tests/test_evals.py
+```
+
+Or run the full suite:
+
 ```bash
 pytest tests/
 ```
 
----
+## Repo Layout
 
-**Happy Learning! 🎓**
+```text
+RAG_at_scale/
+├── RAG_Demo_Docker.ipynb
+├── README.md
+├── SETUP.md
+├── DEPLOYMENT_STATUS.md
+├── docs/
+├── cloudformation/
+├── data/
+├── docker/
+├── scripts/
+├── src/
+└── tests/
+```

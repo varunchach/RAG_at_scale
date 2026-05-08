@@ -1,0 +1,204 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Length 2507 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm (NEXUS SAMPLE QA) Tj
+1 0 0 1 54 724 Tm () Tj
+1 0 0 1 54 710 Tm (# Nexus Sample Questions and Expected Answers) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (Use this document after ingesting `data/raw/nexus_research_bulletin_2025.pdf` into) Tj
+1 0 0 1 54 668 Tm (either app.) Tj
+1 0 0 1 54 654 Tm () Tj
+1 0 0 1 54 640 Tm (## Best Demo Questions) Tj
+1 0 0 1 54 626 Tm () Tj
+1 0 0 1 54 612 Tm (### 1. Who is Dr. Elara Vonn and what is ORIN-7?) Tj
+1 0 0 1 54 598 Tm () Tj
+1 0 0 1 54 584 Tm (Expected answer:) Tj
+1 0 0 1 54 570 Tm () Tj
+1 0 0 1 54 556 Tm (Dr. Elara Vonn is the lead researcher behind the Vonn Entropic Compression theory.) Tj
+1 0 0 1 54 542 Tm (`ORIN-7` is her `400-qubit photonic processor` used in `Halvard, Norway`.) Tj
+1 0 0 1 54 528 Tm () Tj
+1 0 0 1 54 514 Tm (### 2. Which scientist discovered the Mossad-Chen Fold, and what is its thermal) Tj
+1 0 0 1 54 500 Tm (    stability?) Tj
+1 0 0 1 54 486 Tm () Tj
+1 0 0 1 54 472 Tm (Expected answer:) Tj
+1 0 0 1 54 458 Tm () Tj
+1 0 0 1 54 444 Tm (`Professor Tariq Mossad` discovered the `Mossad-Chen Fold`, and it remains stable up to) Tj
+1 0 0 1 54 430 Tm (`210 degrees C`.) Tj
+1 0 0 1 54 416 Tm () Tj
+1 0 0 1 54 402 Tm (### 3. What did FRAC-9 achieve in the benchmark results?) Tj
+1 0 0 1 54 388 Tm () Tj
+1 0 0 1 54 374 Tm (Expected answer:) Tj
+1 0 0 1 54 360 Tm () Tj
+1 0 0 1 54 346 Tm (`FRAC-9` ran a `70-billion-parameter language model` on a device with only `512 MB of) Tj
+1 0 0 1 54 332 Tm (RAM` at `18 tokens per second`, while preserving `96.3%` of the original accuracy on) Tj
+1 0 0 1 54 318 Tm (`NNBS-v4`.) Tj
+1 0 0 1 54 304 Tm () Tj
+1 0 0 1 54 290 Tm (### 4. What is HYDROS-1 and how efficient is it?) Tj
+1 0 0 1 54 276 Tm () Tj
+1 0 0 1 54 262 Tm (Expected answer:) Tj
+1 0 0 1 54 248 Tm () Tj
+1 0 0 1 54 234 Tm (`HYDROS-1` is a `room-temperature hydrogen fuel cell` invented by `Dr. Okafor Nweze`,) Tj
+1 0 0 1 54 220 Tm (and it achieves `91% efficiency` using a `bismuth-selenide membrane`.) Tj
+1 0 0 1 54 206 Tm () Tj
+1 0 0 1 54 192 Tm (### 5. Which city is called the Silicon Fjord, and what initiative reduced energy waste) Tj
+1 0 0 1 54 178 Tm (    there?) Tj
+1 0 0 1 54 164 Tm () Tj
+1 0 0 1 54 150 Tm (Expected answer:) Tj
+1 0 0 1 54 136 Tm () Tj
+1 0 0 1 54 122 Tm (`Halvard, Norway` is called the `Silicon Fjord`, and the `Halvard Smart Grid Initiative`) Tj
+1 0 0 1 54 108 Tm ( reduced energy waste there by `38%`.) Tj
+1 0 0 1 54 94 Tm () Tj
+1 0 0 1 54 80 Tm (## Good Entity-Rich Questions) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 2603 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm () Tj
+1 0 0 1 54 724 Tm (### 6. Which city uses the Desalination Loop, and what percentage of wastewater does it) Tj
+1 0 0 1 54 710 Tm (    recycle?) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (Expected answer:) Tj
+1 0 0 1 54 668 Tm () Tj
+1 0 0 1 54 654 Tm (`Aqaris, Jordan` uses the `Desalination Loop`, and it recycles `99.2%` of wastewater.) Tj
+1 0 0 1 54 640 Tm () Tj
+1 0 0 1 54 626 Tm (### 7. What is veltranite and why is it important?) Tj
+1 0 0 1 54 612 Tm () Tj
+1 0 0 1 54 598 Tm (Expected answer:) Tj
+1 0 0 1 54 584 Tm () Tj
+1 0 0 1 54 570 Tm (`Veltranite` is a rare earth mineral from `Veltran, Canada`. It becomes superconductive) Tj
+1 0 0 1 54 556 Tm (at `-18 degrees C` when doped with `3% osmium`, which makes it important for possible) Tj
+1 0 0 1 54 542 Tm (lossless power transmission.) Tj
+1 0 0 1 54 528 Tm () Tj
+1 0 0 1 54 514 Tm (### 8. What discovery won the Nexus Grand Prize 2025?) Tj
+1 0 0 1 54 500 Tm () Tj
+1 0 0 1 54 486 Tm (Expected answer:) Tj
+1 0 0 1 54 472 Tm () Tj
+1 0 0 1 54 458 Tm (The discovery was `VELT-OS3`, a form of `veltranite doped with 3% osmium` that achieved) Tj
+1 0 0 1 54 444 Tm (superconductivity at `-18 degrees C`. It won the `Nexus Grand Prize 2025`, worth `$5) Tj
+1 0 0 1 54 430 Tm (million`.) Tj
+1 0 0 1 54 416 Tm () Tj
+1 0 0 1 54 402 Tm (### 9. What is MCF-S3 and where was it piloted?) Tj
+1 0 0 1 54 388 Tm () Tj
+1 0 0 1 54 374 Tm (Expected answer:) Tj
+1 0 0 1 54 360 Tm () Tj
+1 0 0 1 54 346 Tm (`MCF-S3` is a synthetic variant of the `Mossad-Chen Fold` protein that can remove `PFAS) Tj
+1 0 0 1 54 332 Tm (chemicals` from water at `99.7% efficiency`. It was piloted at the `Aqaris Eastern) Tj
+1 0 0 1 54 318 Tm (Reservoir`.) Tj
+1 0 0 1 54 304 Tm () Tj
+1 0 0 1 54 290 Tm (### 10. Who pioneered Neuromorphic Fractal Encoding, and where was it deployed?) Tj
+1 0 0 1 54 276 Tm () Tj
+1 0 0 1 54 262 Tm (Expected answer:) Tj
+1 0 0 1 54 248 Tm () Tj
+1 0 0 1 54 234 Tm (`Dr. Senna Brightwell` pioneered `Neuromorphic Fractal Encoding \(NFE\)`, and her startup) Tj
+1 0 0 1 54 220 Tm (`BrightCore AI` deployed it across `47 countries` by `2024`.) Tj
+1 0 0 1 54 206 Tm () Tj
+1 0 0 1 54 192 Tm (## Strong Multi-Hop Questions) Tj
+1 0 0 1 54 178 Tm () Tj
+1 0 0 1 54 164 Tm (### 11. Which city hosts the lab of the Bramwell Prize winner, and what machine does) Tj
+1 0 0 1 54 150 Tm (    that lab use?) Tj
+1 0 0 1 54 136 Tm () Tj
+1 0 0 1 54 122 Tm (Expected answer:) Tj
+1 0 0 1 54 108 Tm () Tj
+1 0 0 1 54 94 Tm (The city is `Halvard, Norway`, and the lab uses `ORIN-7`, a `400-qubit photonic) Tj
+1 0 0 1 54 80 Tm (processor`.) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 2699 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 54 738 Tm () Tj
+1 0 0 1 54 724 Tm (### 12. Which finding could enable lossless transcontinental power transmission, and) Tj
+1 0 0 1 54 710 Tm (    what exact material change made it possible?) Tj
+1 0 0 1 54 696 Tm () Tj
+1 0 0 1 54 682 Tm (Expected answer:) Tj
+1 0 0 1 54 668 Tm () Tj
+1 0 0 1 54 654 Tm (`FINDING NX-005` could enable lossless transcontinental power transmission. It used) Tj
+1 0 0 1 54 640 Tm (`veltranite doped with 3% osmium`, codenamed `VELT-OS3`.) Tj
+1 0 0 1 54 626 Tm () Tj
+1 0 0 1 54 612 Tm (### 13. Which scientist worked on deep-sea proteins, and what industrial use came from) Tj
+1 0 0 1 54 598 Tm (    that work?) Tj
+1 0 0 1 54 584 Tm () Tj
+1 0 0 1 54 570 Tm (Expected answer:) Tj
+1 0 0 1 54 556 Tm () Tj
+1 0 0 1 54 542 Tm (`Professor Tariq Mossad` worked on deep-sea proteins, and that work led to `MCF-S3`,) Tj
+1 0 0 1 54 528 Tm (which can neutralize `PFAS chemicals in water`.) Tj
+1 0 0 1 54 514 Tm () Tj
+1 0 0 1 54 500 Tm (### 14. Compare Elara Vonn's and Okafor Nweze's work in one answer.) Tj
+1 0 0 1 54 486 Tm () Tj
+1 0 0 1 54 472 Tm (Expected answer:) Tj
+1 0 0 1 54 458 Tm () Tj
+1 0 0 1 54 444 Tm (`Elara Vonn` worked on reversible entropy and quantum coherence using `ORIN-7`, while) Tj
+1 0 0 1 54 430 Tm (`Okafor Nweze` developed `HYDROS-1`, a high-efficiency room-temperature hydrogen fuel) Tj
+1 0 0 1 54 416 Tm (cell.) Tj
+1 0 0 1 54 402 Tm () Tj
+1 0 0 1 54 388 Tm (### 15. Which city hosts the Deep Ocean Data Centre, and which scientist there studied) Tj
+1 0 0 1 54 374 Tm (    deep-sea protein structures?) Tj
+1 0 0 1 54 360 Tm () Tj
+1 0 0 1 54 346 Tm (Expected answer:) Tj
+1 0 0 1 54 332 Tm () Tj
+1 0 0 1 54 318 Tm (The city is `Aqaris, Jordan`, and the scientist is `Professor Tariq Mossad`.) Tj
+1 0 0 1 54 304 Tm () Tj
+1 0 0 1 54 290 Tm (## Nice Eval-Demo Questions) Tj
+1 0 0 1 54 276 Tm () Tj
+1 0 0 1 54 262 Tm (These are good questions for the eval app because they tend to generate clean retrieval) Tj
+1 0 0 1 54 248 Tm (evidence and easy-to-explain judge scores.) Tj
+1 0 0 1 54 234 Tm () Tj
+1 0 0 1 54 220 Tm (- `What is GraphRAG and how does it improve standard RAG?`) Tj
+1 0 0 1 54 206 Tm (- `What did FRAC-9 achieve in the benchmark results?`) Tj
+1 0 0 1 54 192 Tm (- `What discovery won the Nexus Grand Prize 2025?`) Tj
+1 0 0 1 54 178 Tm () Tj
+1 0 0 1 54 164 Tm (## Demo Tips) Tj
+1 0 0 1 54 150 Tm () Tj
+1 0 0 1 54 136 Tm (1. Ingest the Nexus PDF first.) Tj
+1 0 0 1 54 122 Tm (2. Ask one direct factual question.) Tj
+1 0 0 1 54 108 Tm (3. Ask one multi-hop question.) Tj
+1 0 0 1 54 94 Tm (4. Show the answer and retrieved chunks.) Tj
+1 0 0 1 54 80 Tm (5. Open the eval dashboard and CloudWatch logs to show judge scores.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000148 00000 n 
+0000002707 00000 n 
+0000002833 00000 n 
+0000005488 00000 n 
+0000005614 00000 n 
+0000008365 00000 n 
+0000008491 00000 n 
+trailer
+<< /Size 10 /Root 9 0 R >>
+startxref
+8540
+%%EOF

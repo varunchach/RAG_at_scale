@@ -1,0 +1,12 @@
+ARG BASE_IMAGE_URI=593755927741.dkr.ecr.us-east-1.amazonaws.com/rag-at-scale-service:latest
+FROM ${BASE_IMAGE_URI}
+
+WORKDIR /app
+
+# Keep shadow-mode defaults in the image itself; the second stack overrides them.
+ENV ENABLE_LLM_JUDGE_EVALS=false
+ENV ENABLE_CLOUDWATCH_APP_METRICS=false
+
+# Retain the proven production runtime and only overlay the changed app code.
+COPY src/ ./src/
+COPY requirements.eval.txt ./requirements.eval.txt

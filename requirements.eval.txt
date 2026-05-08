@@ -1,0 +1,17 @@
+# Eval app image currently reuses the working production base image and overlays
+# only the updated source tree. This file documents the intended lightweight
+# dependency footprint if the eval app is later rebuilt from a slim base.
+boto3
+fastapi
+httpx
+opentelemetry-api
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+opentelemetry-sdk
+prometheus-client
+pydantic
+pydantic-settings
+python-dotenv
+python-json-logger
+requests
+uvicorn[standard]

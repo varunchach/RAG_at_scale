@@ -1,15 +1,19 @@
-# Prometheus Metrics
-from prometheus_client import Counter, Histogram, Gauge, start_http_server
+import logging
+import os
 import time
 from typing import Callable
-import logging
+
+import boto3
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
 logger = logging.getLogger(__name__)
+
 
 class MetricsManager:
     def __init__(self):
         self._metrics_server_started = False
         self._metrics_server_port: int | None = None
+        self._cloudwatch_client = None
         # Counters
         self.requests_total = Counter(
             'rag_requests_total',
@@ -54,6 +58,150 @@ class MetricsManager:
             'rag_index_size',
             'Size of the document index'
         )
+
+    def _cloudwatch_metrics_enabled(self) -> bool:
+        return os.environ.get("ENABLE_CLOUDWATCH_APP_METRICS", "false").lower() == "true"
+
+    def _metric_namespace(self) -> str:
+        return os.environ.get("CLOUDWATCH_METRIC_NAMESPACE", "RAGAtScale/Application")
+
+    def _service_dimensions(self, route: str) -> list[dict[str, str]]:
+        return [
+            {"Name": "Service", "Value": os.environ.get("SERVICE_NAME", "rag-at-scale-service")},
+            {"Name": "Route", "Value": route},
+        ]
+
+    def _get_cloudwatch_client(self):
+        if not self._cloudwatch_metrics_enabled():
+            return None
+        if self._cloudwatch_client is None:
+            self._cloudwatch_client = boto3.client(
+                "cloudwatch",
+                region_name=os.environ.get("AWS_REGION", "us-east-1"),
+            )
+        return self._cloudwatch_client
+
+    def _put_metric_batch(self, metric_data: list[dict]):
+        if not metric_data:
+            return
+        client = self._get_cloudwatch_client()
+        if client is None:
+            return
+
+        for i in range(0, len(metric_data), 20):
+            chunk = metric_data[i : i + 20]
+            try:
+                client.put_metric_data(
+                    Namespace=self._metric_namespace(),
+                    MetricData=chunk,
+                )
+            except Exception:
+                logger.exception("Failed to publish CloudWatch metric batch")
+
+    def publish_search_metrics(
+        self,
+        route: str,
+        retrieval_count: int,
+        reranked_count: int,
+        search_time: float,
+        rerank_time: float | None,
+        generation_time: float | None,
+        total_time: float,
+    ):
+        metric_data = [
+            {
+                "MetricName": "RetrievalChunkCount",
+                "Dimensions": self._service_dimensions(route),
+                "Unit": "Count",
+                "Value": retrieval_count,
+            },
+            {
+                "MetricName": "RerankedChunkCount",
+                "Dimensions": self._service_dimensions(route),
+                "Unit": "Count",
+                "Value": reranked_count,
+            },
+            {
+                "MetricName": "SearchLatencyMs",
+                "Dimensions": self._service_dimensions(route),
+                "Unit": "Milliseconds",
+                "Value": search_time * 1000,
+            },
+            {
+                "MetricName": "EndToEndLatencyMs",
+                "Dimensions": self._service_dimensions(route),
+                "Unit": "Milliseconds",
+                "Value": total_time * 1000,
+            },
+        ]
+
+        if rerank_time is not None:
+            metric_data.append(
+                {
+                    "MetricName": "RerankLatencyMs",
+                    "Dimensions": self._service_dimensions(route),
+                    "Unit": "Milliseconds",
+                    "Value": rerank_time * 1000,
+                }
+            )
+
+        if generation_time is not None:
+            metric_data.append(
+                {
+                    "MetricName": "GenerationLatencyMs",
+                    "Dimensions": self._service_dimensions(route),
+                    "Unit": "Milliseconds",
+                    "Value": generation_time * 1000,
+                }
+            )
+
+        self._put_metric_batch(metric_data)
+
+    def publish_eval_sample_count(self, route: str):
+        self._put_metric_batch(
+            [
+                {
+                    "MetricName": "EvalSampleCount",
+                    "Dimensions": self._service_dimensions(route),
+                    "Unit": "Count",
+                    "Value": 1,
+                }
+            ]
+        )
+
+    def publish_judge_failure(self, route: str):
+        self._put_metric_batch(
+            [
+                {
+                    "MetricName": "JudgeFailureCount",
+                    "Dimensions": self._service_dimensions(route),
+                    "Unit": "Count",
+                    "Value": 1,
+                }
+            ]
+        )
+
+    def publish_eval_scores(self, route: str, scores: dict[str, float]):
+        metric_names = {
+            "faithfulness": "FaithfulnessScore",
+            "context_precision": "ContextPrecisionScore",
+            "context_coverage": "ContextCoverageScore",
+            "answer_relevancy": "AnswerRelevancyScore",
+        }
+        metric_data = []
+        for key, metric_name in metric_names.items():
+            if key not in scores:
+                continue
+            metric_data.append(
+                {
+                    "MetricName": metric_name,
+                    "Dimensions": self._service_dimensions(route),
+                    "Unit": "None",
+                    "Value": scores[key],
+                }
+            )
+
+        self._put_metric_batch(metric_data)
 
     def start_server(self, port: int = 8001):
         """Start Prometheus metrics server"""

@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to ECR for eval image build"
+      - ECR_REGISTRY="$(echo "$EVAL_ECR_URI" | cut -d/ -f1)"
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+  build:
+    commands:
+      - echo "Building eval image ${EVAL_ECR_URI}:${IMAGE_TAG}"
+      - docker build --build-arg BASE_IMAGE_URI="$BASE_IMAGE_URI" -f docker/Dockerfile.eval -t "${EVAL_ECR_URI}:${IMAGE_TAG}" -t "${EVAL_ECR_URI}:latest" .
+  post_build:
+    commands:
+      - echo "Pushing eval image tags to ECR"
+      - docker push "${EVAL_ECR_URI}:${IMAGE_TAG}"
+      - docker push "${EVAL_ECR_URI}:latest"

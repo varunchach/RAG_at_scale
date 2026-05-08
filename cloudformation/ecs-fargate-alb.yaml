@@ -67,6 +67,28 @@ Parameters:
       - 1827
       - 3653
     Description: CloudWatch log retention for ECS application logs.
+  EnableCloudWatchAppMetrics:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable background publication of custom application metrics to CloudWatch.
+  EnableLlmJudgeEvals:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Enable shadow-mode async LLM-as-judge evaluations.
+  EvalSampleRate:
+    Type: String
+    Default: '0.1'
+    Description: Sample rate for background judge evaluations.
+  EvalJudgeModelId:
+    Type: String
+    Default: us.anthropic.claude-haiku-4-5-20251001-v1:0
+    Description: Bedrock model ID used for judge evaluations.
+  CloudWatchMetricNamespace:
+    Type: String
+    Default: RAGAtScale/Application
+    Description: Namespace for custom application and evaluation metrics.
 
 Resources:
   Cluster:
@@ -230,6 +252,18 @@ Resources:
               Value: !Ref AWS::Region
             - Name: AWS_REGION
               Value: !Ref AWS::Region
+            - Name: SERVICE_NAME
+              Value: !Sub '${ProjectName}-service'
+            - Name: ENABLE_CLOUDWATCH_APP_METRICS
+              Value: !Ref EnableCloudWatchAppMetrics
+            - Name: ENABLE_LLM_JUDGE_EVALS
+              Value: !Ref EnableLlmJudgeEvals
+            - Name: EVAL_SAMPLE_RATE
+              Value: !Ref EvalSampleRate
+            - Name: EVAL_JUDGE_MODEL_ID
+              Value: !Ref EvalJudgeModelId
+            - Name: CLOUDWATCH_METRIC_NAMESPACE
+              Value: !Ref CloudWatchMetricNamespace
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -282,6 +316,7 @@ Resources:
                 "x": 0, "y": 2, "width": 8, "height": 6,
                 "properties": {
                   "title": "ECS CPU Utilization (%)",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Average",
                   "period": 60,
@@ -289,6 +324,9 @@ Resources:
                     ["ECS/ContainerInsights", "CpuUtilized", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "CPU Used (vCPU)"}],
                     ["ECS/ContainerInsights", "CpuReserved", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "CPU Reserved (vCPU)", "color": "#aec7e8"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -297,6 +335,7 @@ Resources:
                 "x": 8, "y": 2, "width": 8, "height": 6,
                 "properties": {
                   "title": "ECS Memory Utilization (MB)",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Average",
                   "period": 60,
@@ -304,6 +343,9 @@ Resources:
                     ["ECS/ContainerInsights", "MemoryUtilized", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Memory Used (MB)"}],
                     ["ECS/ContainerInsights", "MemoryReserved", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Memory Reserved (MB)", "color": "#aec7e8"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -312,6 +354,7 @@ Resources:
                 "x": 16, "y": 2, "width": 8, "height": 6,
                 "properties": {
                   "title": "ECS Running Tasks",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Average",
                   "period": 60,
@@ -320,6 +363,9 @@ Resources:
                     ["ECS/ContainerInsights", "DesiredTaskCount", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Desired Tasks", "color": "#aec7e8"}],
                     ["ECS/ContainerInsights", "PendingTaskCount", "ClusterName", "${ProjectName}-cluster", "ServiceName", "${ProjectName}-service", {"label": "Pending Tasks", "color": "#ff7f0e"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -328,12 +374,16 @@ Resources:
                 "x": 0, "y": 8, "width": 8, "height": 6,
                 "properties": {
                   "title": "ALB — Request Count (per minute)",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Sum",
                   "period": 60,
                   "metrics": [
                     ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${AlbId}", {"label": "Total Requests", "color": "#1f77b4"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -342,6 +392,7 @@ Resources:
                 "x": 8, "y": 8, "width": 8, "height": 6,
                 "properties": {
                   "title": "ALB — Target Response Time (ms)",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "period": 60,
                   "metrics": [
@@ -360,6 +411,7 @@ Resources:
                 "x": 16, "y": 8, "width": 8, "height": 6,
                 "properties": {
                   "title": "ALB — HTTP Error Rates",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Sum",
                   "period": 60,
@@ -368,6 +420,9 @@ Resources:
                     ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "${AlbId}", {"label": "5xx Server Errors", "color": "#d62728"}],
                     ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count",    "LoadBalancer", "${AlbId}", {"label": "5xx ALB Errors",    "color": "#9467bd"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -376,6 +431,7 @@ Resources:
                 "x": 0, "y": 14, "width": 8, "height": 6,
                 "properties": {
                   "title": "ALB — Healthy Targets",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Average",
                   "period": 60,
@@ -383,6 +439,9 @@ Resources:
                     ["AWS/ApplicationELB", "HealthyHostCount",   "TargetGroup", "${TgId}", "LoadBalancer", "${AlbId}", {"label": "Healthy", "color": "#2ca02c"}],
                     ["AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${TgId}", "LoadBalancer", "${AlbId}", {"label": "Unhealthy", "color": "#d62728"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0, "max": 5}}
                 }
               },
@@ -391,6 +450,7 @@ Resources:
                 "x": 8, "y": 14, "width": 8, "height": 6,
                 "properties": {
                   "title": "ALB — Active Connections",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Sum",
                   "period": 60,
@@ -398,6 +458,9 @@ Resources:
                     ["AWS/ApplicationELB", "ActiveConnectionCount", "LoadBalancer", "${AlbId}", {"label": "Active Connections", "color": "#17becf"}],
                     ["AWS/ApplicationELB", "NewConnectionCount",    "LoadBalancer", "${AlbId}", {"label": "New Connections",    "color": "#bcbd22"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -406,12 +469,16 @@ Resources:
                 "x": 16, "y": 14, "width": 8, "height": 6,
                 "properties": {
                   "title": "ALB — Processed Bytes",
+                  "region": "${AWS::Region}",
                   "view": "timeSeries",
                   "stat": "Sum",
                   "period": 60,
                   "metrics": [
                     ["AWS/ApplicationELB", "ProcessedBytes", "LoadBalancer", "${AlbId}", {"label": "Bytes Processed", "color": "#8c564b"}]
                   ],
+                  "annotations": {
+                    "horizontal": []
+                  },
                   "yAxis": {"left": {"min": 0}}
                 }
               },
@@ -424,11 +491,153 @@ Resources:
                   "region": "${AWS::Region}",
                   "view": "table"
                 }
+              },
+              {
+                "type": "metric",
+                "x": 0, "y": 28, "width": 6, "height": 6,
+                "properties": {
+                  "title": "Eval Quality — Faithfulness",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "FaithfulnessScore", "Service", "${ProjectName}-service", "Route", "search", {"stat": "Average", "label": "Average"}],
+                    [".", "FaithfulnessScore", ".", ".", ".", ".", {"stat": "p10", "label": "p10", "color": "#ff7f0e"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0, "max": 1}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 6, "y": 28, "width": 6, "height": 6,
+                "properties": {
+                  "title": "Eval Quality — Context Precision",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "ContextPrecisionScore", "Service", "${ProjectName}-service", "Route", "search", {"stat": "Average", "label": "Average"}],
+                    [".", "ContextPrecisionScore", ".", ".", ".", ".", {"stat": "p10", "label": "p10", "color": "#ff7f0e"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0, "max": 1}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 12, "y": 28, "width": 6, "height": 6,
+                "properties": {
+                  "title": "Eval Quality — Context Coverage",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "ContextCoverageScore", "Service", "${ProjectName}-service", "Route", "search", {"stat": "Average", "label": "Average"}],
+                    [".", "ContextCoverageScore", ".", ".", ".", ".", {"stat": "p10", "label": "p10", "color": "#ff7f0e"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0, "max": 1}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 18, "y": 28, "width": 6, "height": 6,
+                "properties": {
+                  "title": "Eval Quality — Answer Relevancy",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "AnswerRelevancyScore", "Service", "${ProjectName}-service", "Route", "search", {"stat": "Average", "label": "Average"}],
+                    [".", "AnswerRelevancyScore", ".", ".", ".", ".", {"stat": "p10", "label": "p10", "color": "#ff7f0e"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0, "max": 1}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0, "y": 34, "width": 8, "height": 6,
+                "properties": {
+                  "title": "Eval Sampling and Failures",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "stat": "Sum",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "EvalSampleCount", "Service", "${ProjectName}-service", "Route", "search", {"label": "Sampled Evals", "color": "#1f77b4"}],
+                    [".", "JudgeFailureCount", ".", ".", ".", ".", {"label": "Judge Failures", "color": "#d62728"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 8, "y": 34, "width": 8, "height": 6,
+                "properties": {
+                  "title": "App Latency — Search and Rerank",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "SearchLatencyMs", "Service", "${ProjectName}-service", "Route", "search", {"stat": "p50", "label": "Search p50"}],
+                    [".", "SearchLatencyMs", ".", ".", ".", ".", {"stat": "p95", "label": "Search p95", "color": "#ff7f0e"}],
+                    [".", "RerankLatencyMs", ".", ".", ".", ".", {"stat": "p50", "label": "Rerank p50", "color": "#2ca02c"}],
+                    [".", "RerankLatencyMs", ".", ".", ".", ".", {"stat": "p95", "label": "Rerank p95", "color": "#d62728"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "metric",
+                "x": 16, "y": 34, "width": 8, "height": 6,
+                "properties": {
+                  "title": "App Latency — Generation and End-to-End",
+                  "region": "${AWS::Region}",
+                  "view": "timeSeries",
+                  "period": 60,
+                  "metrics": [
+                    ["${CloudWatchMetricNamespace}", "GenerationLatencyMs", "Service", "${ProjectName}-service", "Route", "search", {"stat": "p50", "label": "Generation p50"}],
+                    [".", "GenerationLatencyMs", ".", ".", ".", ".", {"stat": "p95", "label": "Generation p95", "color": "#ff7f0e"}],
+                    [".", "EndToEndLatencyMs", ".", ".", ".", ".", {"stat": "p50", "label": "End-to-End p50", "color": "#2ca02c"}],
+                    [".", "EndToEndLatencyMs", ".", ".", ".", ".", {"stat": "p95", "label": "End-to-End p95", "color": "#d62728"}]
+                  ],
+                  "annotations": {
+                    "horizontal": []
+                  },
+                  "yAxis": {"left": {"min": 0}}
+                }
+              },
+              {
+                "type": "log",
+                "x": 0, "y": 40, "width": 24, "height": 8,
+                "properties": {
+                  "title": "Eval Logs — Latest Judge Decisions",
+                  "query": "SOURCE '/ecs/${ProjectName}-service' | fields @timestamp, request_id, faithfulness, context_precision, context_coverage, answer_relevancy, judge_verdict | filter message = 'LLM Judge Evaluation Completed' | sort @timestamp desc | limit 20",
+                  "region": "${AWS::Region}",
+                  "view": "table"
+                }
               }
             ]
           }
         - AlbId: !Select [1, !Split ["loadbalancer/", !GetAtt LoadBalancer.LoadBalancerArn]]
           TgId:  !Select [1, !Split ["targetgroup/",  !GetAtt TargetGroup.TargetGroupArn]]
+          CloudWatchMetricNamespace: !Ref CloudWatchMetricNamespace
 
 Outputs:
   ClusterName:

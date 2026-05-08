@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from datetime import datetime
 from typing import Dict, List
 
@@ -23,6 +24,7 @@ try:
     )
     from .ingest import pdf_to_chunks
     from ..embeddings.spark_embedder import SparkEmbedder
+    from ..observability.evals import EvalPayload, LLMJudgeEvaluator
     from ..observability.logging_config import log_search_query
     from ..observability.metrics import metrics
     from ..retrieval.hybrid_search import HybridSearch
@@ -39,6 +41,7 @@ except ImportError:  # Notebook path when `src` is injected into sys.path
     )
     from service.ingest import pdf_to_chunks
     from embeddings.spark_embedder import SparkEmbedder
+    from observability.evals import EvalPayload, LLMJudgeEvaluator
     from observability.logging_config import log_search_query
     from observability.metrics import metrics
     from retrieval.hybrid_search import HybridSearch
@@ -55,6 +58,7 @@ class RAGService:
         self.search_engine: HybridSearch | None = None
         self.reranker = Reranker()
         self.embedder = SparkEmbedder()
+        self.evaluator = LLMJudgeEvaluator()
         self._doc_store: Dict[str, str] = {}
         self._bedrock = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-east-1"))
 
@@ -69,6 +73,7 @@ class RAGService:
 
     async def search(self, request: SearchRequest) -> SearchResponse:
         start_time = time.time()
+        request_id = uuid.uuid4().hex
 
         if not self.search_engine:
             raise HTTPException(status_code=500, detail="Search engine not initialised")
@@ -83,6 +88,7 @@ class RAGService:
                 top_k=request.top_k * 2,
                 alpha=request.alpha,
             )
+            retrieval_count = len(raw_results)
 
             # Enrich with stored content
             results = [
@@ -118,6 +124,7 @@ class RAGService:
             search_time = time.time() - start_time
             log_search_query(request.query, len(results), search_time)
             metrics.searches_performed.inc()
+            metrics.search_duration.observe(search_time)
 
             answer = None
             answer_time = None
@@ -129,7 +136,11 @@ class RAGService:
                 answer = await self._generate_answer(request.query, chunks_for_llm, request.history)
                 answer_time = time.time() - ans_start
 
-            return SearchResponse(
+            total_time = time.time() - start_time
+            metrics.request_duration.labels(method="POST", endpoint="/search").observe(total_time)
+            metrics.requests_total.labels(method="POST", endpoint="/search", status="200").inc()
+
+            response = SearchResponse(
                 query=request.query,
                 results=results,
                 total_results=len(results),
@@ -139,7 +150,36 @@ class RAGService:
                 answer_time=answer_time,
             )
 
+            eval_payload = EvalPayload(
+                request_id=request_id,
+                route="search",
+                query=request.query,
+                answer=answer,
+                chunks=[
+                    {
+                        "doc_id": r.doc_id,
+                        "content": r.content,
+                        "score": r.score,
+                        "rerank_score": r.rerank_score,
+                    }
+                    for r in results
+                ],
+                retrieval_count=retrieval_count,
+                reranked_count=len(results),
+                search_time=search_time,
+                rerank_time=rerank_time,
+                answer_time=answer_time,
+                total_time=total_time,
+            )
+            try:
+                self._schedule_post_response_observability(eval_payload)
+            except Exception:
+                logger.exception("Failed to schedule post-response observability")
+
+            return response
+
         except Exception as e:
+            metrics.requests_total.labels(method="POST", endpoint="/search", status="500").inc()
             logger.error("Search failed: %s", str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
@@ -191,6 +231,22 @@ class RAGService:
         except Exception as e:
             logger.warning("LLM answer generation failed: %s", e)
             return None
+
+    def _schedule_post_response_observability(self, payload: EvalPayload):
+        asyncio.create_task(self._run_post_response_observability(payload))
+
+    async def _run_post_response_observability(self, payload: EvalPayload):
+        await asyncio.to_thread(
+            metrics.publish_search_metrics,
+            payload.route,
+            payload.retrieval_count,
+            payload.reranked_count,
+            payload.search_time,
+            payload.rerank_time,
+            payload.answer_time,
+            payload.total_time,
+        )
+        await asyncio.to_thread(self.evaluator.evaluate_and_record, payload)
 
     async def ingest(self, filename: str, file_bytes: bytes) -> IngestResponse:
         if not filename.lower().endswith(".pdf"):
